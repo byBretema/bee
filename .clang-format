@@ -28,8 +28,8 @@ AllowShortCaseLabelsOnASingleLine: true
 
 AllowShortLambdasOnASingleLine: All
 
-# AllowShortFunctionsOnASingleLine: Inline
-AllowShortFunctionsOnASingleLine: None
+AllowShortFunctionsOnASingleLine: Inline
+# AllowShortFunctionsOnASingleLine: None
 
 # AllowShortLoopsOnASingleLine: true
 AllowShortLoopsOnASingleLine: false
