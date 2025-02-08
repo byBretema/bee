@@ -12,6 +12,8 @@ IndentWidth: 4
 AccessModifierOffset: -4
 ContinuationIndentWidth: 2
 
+MaxEmptyLinesToKeep: 2
+
 ColumnLimit: 120
 
 # ========================================================
