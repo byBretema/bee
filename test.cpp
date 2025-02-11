@@ -1,5 +1,6 @@
 #define ALT_CPP_IMPLEMENTATION
 // #define ALT_CPP_INCLUDE_FMT
+#define ALT_CPP_INCLUDE_GLM
 #include "alt.hpp"
 
 #include <iostream>
@@ -7,6 +8,7 @@
 #include <vector>
 
 using namespace ac::TypeAlias_Numbers;
+using namespace ac::TypeAlias_GLM;
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -29,6 +31,13 @@ int main()
     ac_info("2 elevated to {} is {} = {}", 4, ac_bit(4), true);
     ac_info("2 elevated to {} is {} = {}", 5, ac_bit(5), true);
     std::cout << "[ ac ] : " << t.elapsed_ms() * t.is_valid() << " ms \n";
+
+#ifdef ALT_CPP_INCLUDE_GLM
+    t.reset();
+    // std::string s = glm::to_string(glm::vec3(2.f));
+    ac_info("glm vec3 {}", glmstr(vec3(2.f)));
+    std::cout << "[ glm ] : " << t.elapsed_ms() * t.is_valid() << " ms \n";
+#endif
 }
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

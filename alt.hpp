@@ -74,13 +74,14 @@
 #ifdef ALT_CPP_INCLUDE_GLM
 // #define GLM_FORCE_SSE
 // #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-#    define GLM_FORCE_INLINE
 #    define GLM_ENABLE_EXPERIMENTAL
 #    define GLM_FORCE_SWIZZLE
 #    define GLM_FORCE_SILENT_WARNINGS
 #    define GLM_FORCE_RADIANS
 #    define GLM_FORCE_LEFT_HANDED
 #    define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#    include <glm/gtx/string_cast.hpp>  // Before of 'GLM_FORCE_INLINE'
+#    define GLM_FORCE_INLINE
 #    include <glm/glm.hpp>
 #    include <glm/gtc/constants.hpp>
 #    include <glm/gtc/matrix_transform.hpp>
@@ -88,9 +89,9 @@
 #    include <glm/gtc/type_ptr.hpp>
 #    include <glm/gtx/component_wise.hpp>
 #    include <glm/gtx/euler_angles.hpp>
-#    include <glm/gtx/string_cast.hpp>
 #    include <glm/gtx/vec_swizzle.hpp>
 #    include <glm/gtx/vector_angle.hpp>
+#define glmstr(x) glm::to_string(x)
 #endif
 
 
@@ -159,7 +160,7 @@ std::string              format(std::string msg, std::vector<std::string> const 
 std::vector<std::string> to_iterable();
 
 template<typename T, typename... Args>
-inline std::vector<std::string> to_iterable(T &&first, Args &&...args)
+std::vector<std::string> to_iterable(T &&first, Args &&...args)
 {
     std::ostringstream oss;
     oss << std::boolalpha << first;
@@ -729,73 +730,3 @@ bool fuzzyEq(vec4 const &v1, vec4 const &v2, f32 t)
 #    endif  // _ALT_CPP_IMPLEMENTATION
 
 #endif  // ALT_CPP_IMPLEMENTATION
-
-
-//=============================================================================
-//=============================================================================
-// PRINT HELPERS
-//=============================================================================
-//=============================================================================
-
-#ifdef ALT_CPP_INCLUDE_FMT
-
-
-//-------------------------------------
-// ... GLM
-//-------------------------------------
-
-#    ifdef ALT_CPP_INCLUDE_GLM
-template<glm::length_t C>
-struct fmt::formatter<glm::vec<C, float, glm::defaultp>>
-{
-    constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.begin(); }
-
-    template<typename FormatContext>
-    auto format(const glm::vec<C, float, glm::defaultp> &v, FormatContext &ctx) const -> decltype(ctx.out())
-    {
-        std::string s = "(";
-        for (glm::length_t i = 0; i < C; ++i)
-        {
-            s += fmt::format("{:.{}f},", v[i], mo::settings::log_float_precission);
-        }
-        s.erase(s.end() - 1, s.end());
-        s += ")";
-        return fmt::format_to(ctx.out(), "{}", s);
-    }
-};
-#    endif
-
-
-//-------------------------------------
-// ...
-//-------------------------------------
-
-#else
-
-
-// //-------------------------------------
-// // ... GLM
-// //-------------------------------------
-
-// #    ifdef ALT_CPP_INCLUDE_GLM
-// template<glm::length_t C>
-// struct fmt::formatter<glm::vec<C, float, glm::defaultp>>
-// {
-//     constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.begin(); }
-
-//     template<typename FormatContext>
-//     auto format(const glm::vec<C, float, glm::defaultp> &v, FormatContext &ctx) const -> decltype(ctx.out())
-//     {
-//         std::string s = "(";
-//         for (glm::length_t i = 0; i < C; ++i)
-//         {
-//             s += fmt::format("{:.{}f},", v[i], mo::settings::log_float_precission);
-//         }
-//         s.erase(s.end() - 1, s.end());
-//         s += ")";
-//         return fmt::format_to(ctx.out(), "{}", s);
-//     }
-// };
-// #    endif
-
-#endif
