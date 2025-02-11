@@ -146,50 +146,42 @@ private:
 #    define ac_fmt(msg, ...) fmt::format(msg, __VA_ARGS__)
 
 // Logging helpers
-#    define ac_info(msg, ...)  fmt::println("[INFO] | {}:{} | {}\n", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
-#    define ac_warn(msg, ...)  fmt::println("[WARN] | {}:{} | {}\n", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
-#    define ac_err(msg, ...)   fmt::println("[ERRO] | {}:{} | {}\n", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
-#    define ac_debug(msg, ...) fmt::println("[DBUG] | {}:{} | {}\n", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
+#    define ac_info(msg, ...)  fmt::println("[INFO] | {}:{} | {}", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
+#    define ac_warn(msg, ...)  fmt::println("[WARN] | {}:{} | {}", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
+#    define ac_err(msg, ...)   fmt::println("[ERRO] | {}:{} | {}", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
+#    define ac_debug(msg, ...) fmt::println("[DBUG] | {}:{} | {}", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
 #else
-#    warning "WARN: Not using fmt-lib can reduce general performace if you use ac_fmt/info/err/.. methods a lot."
+#    warning "WARN: Not using fmt-lib will improve experience (and performance) of ac_fmt/info/err/.. methods a lot."
 #    include <iostream>
-// [__ac_args_to_iterable] Base case
-inline std::vector<std::string> __ac_args_to_iterable()
+namespace ac::detail
 {
-    return {};
-}
-// [__ac_args_to_iterable] Recursive case
+std::string              format(std::string msg, std::vector<std::string> const &args);
+std::vector<std::string> to_iterable();
+
 template<typename T, typename... Args>
-inline std::vector<std::string> __ac_args_to_iterable(T &&first, Args &&...args)
+inline std::vector<std::string> to_iterable(T &&first, Args &&...args)
 {
     std::ostringstream oss;
-    oss << first;
-    std::vector<std::string> result {oss.str()};
-    std::vector<std::string> rest = __ac_args_to_iterable(std::forward<Args>(args)...);
+    oss << std::boolalpha << first;
+    std::vector<std::string> result { oss.str() };
+    std::vector<std::string> rest = to_iterable(std::forward<Args>(args)...);
     result.insert(result.end(), rest.begin(), rest.end());
     return result;
 }
-inline std::string __ac_format(std::string msg, std::vector<std::string> const &args)
-{
-    static constexpr std::string target = "{}";
-    size_t ri = 0;
-    size_t pos = 0;
-    while ((pos = msg.find(target, pos)) != std::string::npos) {
-        if (ri > args.size()) break;
-        auto const replacement = args[ri];
-        msg.replace(pos, target.length(), replacement);
-        pos += replacement.length();
-        ++ri;
-    }
-    return msg;
-}
+}  // namespace ac::detail
+
 // String Builder
-#    define ac_fmt(msg, ...)    __ac_format(msg, __ac_args_to_iterable(__VA_ARGS__))
+#    define ac_fmt(msg, ...) ac::detail::format(msg, ac::detail::to_iterable(__VA_ARGS__))
+
 // Logging helpers
-#    define ac_info(msg, ...)  std::cout << "[INFO] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
-#    define ac_warn(msg, ...)  std::cout << "[WARN] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
-#    define ac_err(msg, ...)   std::cout << "[ERRO] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
-#    define ac_debug(msg, ...) std::cout << "[DBUG] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
+#    define ac_info(msg, ...) \
+        std::cout << "[INFO] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
+#    define ac_warn(msg, ...) \
+        std::cout << "[WARN] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
+#    define ac_err(msg, ...) \
+        std::cout << "[ERRO] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
+#    define ac_debug(msg, ...) \
+        std::cout << "[DBUG] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
 #endif
 
 //=========================================================
@@ -479,6 +471,31 @@ inline bool isAligned(T const &a, T const &b, f32 margin = 0.f)
 
 namespace ac
 {
+
+//-------------------------------------
+// ... Logger
+//-------------------------------------
+
+#        ifndef ALT_CPP_INCLUDE_FMT
+namespace detail
+{
+    std::string format(std::string msg, std::vector<std::string> const &args)
+    {
+        msg += " | <== ";
+        for (size_t i = 0; i < args.size()-1; ++i)
+        {
+            msg += "{ " + args[i] + " } : ";
+        }
+        msg += "{ " + args[args.size()-1] + " }";
+        return msg;
+    }
+    std::vector<std::string> to_iterable()
+    {
+        return {};
+    }
+}  // namespace detail
+#        endif
+
 
 //-------------------------------------
 // ... Elapsed Timer
