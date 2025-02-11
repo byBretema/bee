@@ -1,10 +1,98 @@
 #pragma once
 
-#include "timer.hpp"
+/* alt_cpp (ac) - v0.01
+
+    An alternative take on cpp.
+    Basically some aliases and helpers.
+
+    Also a bunch of code that I found myself repeating between project.
+
+    No warranty implied, use at your own risk.
+
+    =============================================
+    ! How to include
+    =============================================
+
+    -- Classic header-only stuff, add this:
+
+    #define ALT_CPP_IMPLEMENTATION
+
+    -- Before you include this file in *one* C++ file to create the
+    implementation, something like this:
+
+    #include ...
+    #include ...
+    #define ALT_CPP_IMPLEMENTATION
+    #include "alt.hpp"
+
+    =============================================
+    ! Other define-driven options are:
+    =============================================
+
+    -- If you use fmt-lib, 'alt' will include basic fmt header files and
+    expose, basic log methods: ac_info/warn/err/debug("", ...)
+
+    #define ALT_CPP_INCLUDE_FMT
+
+    -- If you use glm-lib, 'alt' will include basic glm header files
+
+    #define ALT_CPP_INCLUDE_GLM
+
+*/
+
+
+//=========================================================
+//== INCLUDES
+//=========================================================
 
 #include <cstdint>
 #include <limits>
+#include <cmath>
 #include <chrono>
+
+#include <span>
+#include <array>
+#include <vector>
+#include <string>
+#include <optional>
+#include <set>
+#include <unordered_set>
+#include <map>
+#include <unordered_map>
+
+#include <memory>
+#include <algorithm>
+// #include <functional>
+
+#ifdef ALT_CPP_INCLUDE_FMT
+#    include <fmt/format.h>
+#    include <fmt/ranges.h>
+#    include <fmt/chrono.h>
+#    include <fmt/std.h>
+#endif
+
+#ifdef ALT_CPP_INCLUDE_GLM
+// #define GLM_FORCE_SSE
+// #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+#    define GLM_FORCE_INLINE
+#    define GLM_ENABLE_EXPERIMENTAL
+#    define GLM_FORCE_SWIZZLE
+#    define GLM_FORCE_SILENT_WARNINGS
+#    define GLM_FORCE_RADIANS
+#    define GLM_FORCE_LEFT_HANDED
+#    define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#    include <glm/glm.hpp>
+#    include <glm/gtc/constants.hpp>
+#    include <glm/gtc/matrix_transform.hpp>
+#    include <glm/gtc/quaternion.hpp>
+#    include <glm/gtc/type_ptr.hpp>
+#    include <glm/gtx/component_wise.hpp>
+#    include <glm/gtx/euler_angles.hpp>
+#    include <glm/gtx/string_cast.hpp>
+#    include <glm/gtx/vec_swizzle.hpp>
+#    include <glm/gtx/vector_angle.hpp>
+#endif
+
 
 //=========================================================
 //== CONCAT
@@ -14,26 +102,29 @@
 #define __AC_CONCAT1(l, r) __AC_CONCAT2(l, r)
 #define AC_CONCAT(l, r)    __AC_CONCAT1(l, r)
 
+
 //=========================================================
 //== DEFER
 //=========================================================
 
-#define __detail_ac_defer_ref(fn)  const auto AC_CONCAT(defer__, __LINE__) = ac::detail::Defer([&]() { fn; });
-#define __detail_ac_defer_copy(fn) const auto AC_CONCAT(defer__, __LINE__) = ac::detail::Defer([=]() { fn; });
 
-#define ac_defer(fn) __detail_ac_defer_ref(fn)
+#define ac_defer(fn) const auto AC_CONCAT(defer__, __LINE__) = ac::detail::Defer([&]() { fn; })
 #ifndef defer
-#    define defer(fn) __detail_ac_defer_ref(fn)
+#    define defer(fn) ac_defer(fn)
+#else
+#    warning "MACRO_WARN: 'defer' is already defined using it might end in a missbehave"
 #endif
 
-#define ac_deferc(fn) __detail_ac_defer_copy(fn)
+#define ac_deferc(fn) const auto AC_CONCAT(defer__, __LINE__) = ac::detail::Defer([=]() { fn; })
 #ifndef deferc
-#    define deferc(fn) __detail_ac_defer_copy(fn)
+#    define deferc(fn) ac_deferc(fn)
+#else
+#    warning "MACRO_WARN: 'deferc' is already defined using it might end in a missbehave"
 #endif
 
 namespace ac::detail
 {
-template<typename T>  // <- Shout-out to https://github.com/javiersalcedopuyo
+template<typename T>  // <- Shout-Out to https://github.com/javiersalcedopuyo
 class Defer
 {
 public:
@@ -44,6 +135,62 @@ public:
 private:
     const T fn;
 };
+}  // namespace ac::detail
+
+//=========================================================
+//== LOGGING
+//=========================================================
+
+#ifdef ALT_CPP_INCLUDE_FMT
+// String Builder
+#    define ac_fmt(msg, ...) fmt::format(msg, __VA_ARGS__)
+
+// Logging helpers
+#    define ac_info(msg, ...)  fmt::println("[INFO] | {}:{} | {}\n", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
+#    define ac_warn(msg, ...)  fmt::println("[WARN] | {}:{} | {}\n", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
+#    define ac_err(msg, ...)   fmt::println("[ERRO] | {}:{} | {}\n", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
+#    define ac_debug(msg, ...) fmt::println("[DBUG] | {}:{} | {}\n", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
+#else
+#    warning "WARN: Not using fmt-lib can reduce general performace if you use ac_fmt/info/err/.. methods a lot."
+#    include <iostream>
+// [__ac_args_to_iterable] Base case
+inline std::vector<std::string> __ac_args_to_iterable()
+{
+    return {};
+}
+// [__ac_args_to_iterable] Recursive case
+template<typename T, typename... Args>
+inline std::vector<std::string> __ac_args_to_iterable(T &&first, Args &&...args)
+{
+    std::ostringstream oss;
+    oss << first;
+    std::vector<std::string> result {oss.str()};
+    std::vector<std::string> rest = __ac_args_to_iterable(std::forward<Args>(args)...);
+    result.insert(result.end(), rest.begin(), rest.end());
+    return result;
+}
+inline std::string __ac_format(std::string msg, std::vector<std::string> const &args)
+{
+    static constexpr std::string target = "{}";
+    size_t ri = 0;
+    size_t pos = 0;
+    while ((pos = msg.find(target, pos)) != std::string::npos) {
+        if (ri > args.size()) break;
+        auto const replacement = args[ri];
+        msg.replace(pos, target.length(), replacement);
+        pos += replacement.length();
+        ++ri;
+    }
+    return msg;
+}
+// String Builder
+#    define ac_fmt(msg, ...)    __ac_format(msg, __ac_args_to_iterable(__VA_ARGS__))
+// Logging helpers
+#    define ac_info(msg, ...)  std::cout << "[INFO] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
+#    define ac_warn(msg, ...)  std::cout << "[WARN] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
+#    define ac_err(msg, ...)   std::cout << "[ERRO] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
+#    define ac_debug(msg, ...) std::cout << "[DBUG] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
+#endif
 
 //=========================================================
 //== OTHER MACROS
@@ -52,129 +199,586 @@ private:
 #define ac_bind(fn) [this](auto &&...args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
 #define ac_bit(x)   (1 << x)
 
-//=========================================================
-//== ELAPSED TIMER
-//=========================================================
+#define ac_nocopy(T)                  \
+public:                               \
+    T(T const &)            = delete; \
+    T &operator=(T const &) = delete;
 
-class ElapsedTimer
-{
-    using Clock = std::chrono::high_resolution_clock;
+#define ac_nomove(T)                      \
+public:                                   \
+    T(T &&) noexcept            = delete; \
+    T &operator=(T &&) noexcept = delete;
 
-public:
-    inline void reset()
-    {
-        m_ref   = Clock::now();
-        m_valid = true;
-    }
+#define ac_nocopy_nomove(T) ac_nocopy(T) ac_nomove(T)
 
-    inline i64  elapsed_s() const { return elapsed<std::chrono::seconds>(); }
-    inline i64  elapsed_ms() const { return elapsed<std::chrono::milliseconds>(); }
-    inline i64  elapsed_us() const { return elapsed<std::chrono::microseconds>(); }
-    inline i64  elapsed_ns() const { return elapsed<std::chrono::nanoseconds>(); }
-    inline bool is_valid() const { return m_valid; }
-
-private:
-    Clock::time_point m_ref   = Clock::now();
-    bool              m_valid = false;
-
-    template<typename TimeUnit>
-    inline i64 elapsed() const
-    {
-        return std::chrono::duration_cast<TimeUnit>(Clock::now() - m_ref).count();
-    }
-};
-using ETimer = ElapsedTimer;
+#define ac_as(T, x) static_cast<T>(x)
+#ifndef as
+#    define as(T, x) ac_as(T, x)
+#else
+#    warning "MACRO_WARN: 'as' is already defined using it might end in a missbehave"
+#endif
 
 
 //=========================================================
-//== CONSTANTS
+//== NAMESPACE
 //=========================================================
 
 namespace ac
 {
 
-    //-------------------------------------
-    // ... Time Consts
-    //-------------------------------------
+//-------------------------------------
+// ... Numbers Aliases
+//-------------------------------------
 
-    inline constexpr u64 s_to_ns = 1e+9;
-    inline constexpr u64 ns_to_s = 1e-9;
+namespace TypeAlias_Numbers
+{
+    // Bool
+    using b8 = bool;
 
-    inline constexpr u64 s_to_us  = 1e+6;
-    inline constexpr u64 us_to_ss = 1e-6;
+    // Signed
+    using i8                         = int8_t;
+    using i16                        = int16_t;
+    using i32                        = int32_t;
+    using i64                        = int64_t;
+    using isize                      = ptrdiff_t;
+    inline constexpr i8    i8_min    = std::numeric_limits<i8>::min();
+    inline constexpr i8    i8_max    = std::numeric_limits<i8>::max();
+    inline constexpr i16   i16_min   = std::numeric_limits<i16>::min();
+    inline constexpr i16   i16_max   = std::numeric_limits<i16>::max();
+    inline constexpr i32   i32_min   = std::numeric_limits<i32>::min();
+    inline constexpr i32   i32_max   = std::numeric_limits<i32>::max();
+    inline constexpr i64   i64_min   = std::numeric_limits<i64>::min();
+    inline constexpr i64   i64_max   = std::numeric_limits<i64>::max();
+    inline constexpr isize isize_min = std::numeric_limits<isize>::min();
+    inline constexpr isize isize_max = std::numeric_limits<isize>::max();
 
-    inline constexpr u64 s_to_ms = 1e+3;
-    inline constexpr u64 ms_to_s = 1e-3;
+    // Unsigned
+    using u8                         = uint8_t;
+    using u16                        = uint16_t;
+    using u32                        = uint32_t;
+    using u64                        = uint64_t;
+    using usize                      = size_t;
+    inline constexpr u8    u8_min    = std::numeric_limits<u8>::min();
+    inline constexpr u8    u8_max    = std::numeric_limits<u8>::max();
+    inline constexpr u16   u16_min   = std::numeric_limits<u16>::min();
+    inline constexpr u16   u16_max   = std::numeric_limits<u16>::max();
+    inline constexpr u32   u32_min   = std::numeric_limits<u32>::min();
+    inline constexpr u32   u32_max   = std::numeric_limits<u32>::max();
+    inline constexpr u64   u64_min   = std::numeric_limits<u64>::min();
+    inline constexpr u64   u64_max   = std::numeric_limits<u64>::max();
+    inline constexpr usize usize_min = std::numeric_limits<usize>::min();
+    inline constexpr usize usize_max = std::numeric_limits<usize>::max();
 
-    inline constexpr u64 ms_to_ns = 1e+6;
-    inline constexpr u64 ns_to_ms = 1e-6;
+    // Floating point
+    using f32                        = float;
+    using f64                        = double;
+    inline constexpr f32 f32_min     = std::numeric_limits<f32>::min();
+    inline constexpr f32 f32_max     = std::numeric_limits<f32>::max();
+    inline constexpr f64 f64_min     = std::numeric_limits<f64>::min();
+    inline constexpr f64 f64_max     = std::numeric_limits<f64>::max();
+    inline constexpr f32 f32_epsilon = std::numeric_limits<f32>::epsilon();
+    inline constexpr f64 f64_epsilon = std::numeric_limits<f64>::epsilon();
 
-    inline constexpr u64 ms_to_us = 1e+3;
-    inline constexpr u64 us_to_ms = 1e-3;
-
-    inline constexpr u64 us_to_ns = 1e+3;
-    inline constexpr u64 ns_to_us = 1e-3;
+}  // namespace TypeAlias_Numbers
+using namespace TypeAlias_Numbers;
 
 
-    //-------------------------------------
-    // ... Numeric Aliases
-    //-------------------------------------
+//-------------------------------------
+// ... Pointers Aliases
+//-------------------------------------
 
-    namespace NumericAliases
+namespace TypeAlias_Pointers
+{
+    // Unique pointer
+    template<typename T>
+    using uptr = std::unique_ptr<T>;
+    template<typename T, typename... Args>
+    constexpr uptr<T> unew(Args &&...args)
     {
-        using b8 = bool;
+        return std::make_unique<T>(std::forward<Args>(args)...);
+    }
 
-        using i8  = int8_t;
-        using i16 = int16_t;
-        using i32 = int32_t;
-        using i64 = int64_t;
+    // Shared pointer
+    template<typename T>
+    using sptr = std::shared_ptr<T>;
+    template<typename T, typename... Args>
+    constexpr sptr<T> snew(Args &&...args)
+    {
+        return std::make_shared<T>(std::forward<Args>(args)...);
+    }
+}  // namespace TypeAlias_Pointers
+using namespace TypeAlias_Pointers;
 
-        using u8  = uint8_t;
-        using u16 = uint16_t;
-        using u32 = uint32_t;
-        using u64 = uint64_t;
 
-        using f32 = float;
-        using f64 = double;
+//-------------------------------------
+// ... Containers Aliases
+//-------------------------------------
 
-        using usize = size_t;
-        using isize = ptrdiff_t;
+namespace TypeAlias_Containers
+{
+    // Maps
+    template<typename K, typename V>
+    using umap = std::unordered_map<K, V>;
+    template<typename K, typename V>
+    using omap = std::map<K, V>;
 
-        inline constexpr i8  i8_max  = std::numeric_limits<i8>::max();
-        inline constexpr i16 i16_max = std::numeric_limits<i16>::max();
-        inline constexpr i32 i32_max = std::numeric_limits<i32>::max();
-        inline constexpr i64 i64_max = std::numeric_limits<i64>::max();
+    // Sets
+    template<typename T>
+    using uset = std::unordered_set<T>;
+    template<typename T>
+    using oset = std::set<T>;
 
-        inline constexpr u8  u8_max  = std::numeric_limits<u8>::max();
-        inline constexpr u16 u16_max = std::numeric_limits<u16>::max();
-        inline constexpr u32 u32_max = std::numeric_limits<u32>::max();
-        inline constexpr u64 u64_max = std::numeric_limits<u64>::max();
+    // Arrays
+    template<typename T>
+    using vec = std::vector<T>;
+    template<typename T, size_t S>
+    using arr = std::array<T, S>;
 
-        inline constexpr f32 f32_max = std::numeric_limits<f32>::max();
-        inline constexpr f64 f64_max = std::numeric_limits<f64>::max();
+    // Optional
+    template<typename T>
+    using opt = std::optional<T>;
+}  // namespace TypeAlias_Containers
+static inline constexpr auto none = std::nullopt;
+using namespace TypeAlias_Containers;
 
-        inline constexpr usize usize_max = std::numeric_limits<usize>::max();
-        inline constexpr isize isize_max = std::numeric_limits<isize>::max();
 
-        inline constexpr i8  i8_min  = std::numeric_limits<i8>::min();
-        inline constexpr i16 i16_min = std::numeric_limits<i16>::min();
-        inline constexpr i32 i32_min = std::numeric_limits<i32>::min();
-        inline constexpr i64 i64_min = std::numeric_limits<i64>::min();
+//-------------------------------------
+// ... GLM Aliases
+//-------------------------------------
 
-        inline constexpr u8  u8_min  = std::numeric_limits<u8>::min();
-        inline constexpr u16 u16_min = std::numeric_limits<u16>::min();
-        inline constexpr u32 u32_min = std::numeric_limits<u32>::min();
-        inline constexpr u64 u64_min = std::numeric_limits<u64>::min();
+#ifdef ALT_CPP_INCLUDE_GLM
 
-        inline constexpr f32 f32_min = std::numeric_limits<f32>::min();
-        inline constexpr f64 f64_min = std::numeric_limits<f64>::min();
+namespace TypeAlias_GLM
+{
+    using vec2 = glm::vec2;
+    using vec3 = glm::vec3;
+    using vec4 = glm::vec4;
+    using mat4 = glm::mat4;
+}  // namespace TypeAlias_GLM
+using namespace TypeAlias_GLM;
 
-        inline constexpr usize usize_min = std::numeric_limits<usize>::min();
-        inline constexpr isize isize_min = std::numeric_limits<isize>::min();
+#endif
 
-        inline constexpr f32 f32_epsilon = std::numeric_limits<f32>::epsilon();
-        inline constexpr f64 f64_epsilon = std::numeric_limits<f64>::epsilon();
-    }  // namespace NumericAliases
-    using namespace NumericAliases;
+
+//-------------------------------------
+// ... Time Consts
+//-------------------------------------
+
+inline constexpr f64 s_to_ms = 1e+3;
+inline constexpr f64 s_to_us = 1e+6;
+inline constexpr f64 s_to_ns = 1e+9;
+
+inline constexpr f64 ms_to_s  = 1e-3;
+inline constexpr f64 ms_to_us = 1e+3;
+inline constexpr f64 ms_to_ns = 1e+6;
+
+inline constexpr f64 us_to_s  = 1e-6;
+inline constexpr f64 us_to_ms = 1e-3;
+inline constexpr f64 us_to_ns = 1e+3;
+
+inline constexpr f64 ns_to_s  = 1e-9;
+inline constexpr f64 ns_to_ms = 1e-6;
+inline constexpr f64 ns_to_us = 1e-3;
+
+
+//-------------------------------------
+// ... Elapsed Timer
+//-------------------------------------
+
+class ElapsedTimer
+{
+public:
+    void reset();
+    f64  elapsed_s() const;
+    f64  elapsed_ms() const;
+    f64  elapsed_us() const;
+    f64  elapsed_ns() const;
+    bool is_valid() const;
+
+private:
+    i64 elapsed() const;
+
+private:
+    using Clock               = std::chrono::high_resolution_clock;
+    Clock::time_point m_ref   = Clock::now();
+    bool              m_valid = false;
+};
+using ETimer = ElapsedTimer;
+
+
+//-------------------------------------
+// ... String Utils
+//-------------------------------------
+
+std::string
+  str_replace(std::string to_replace, std::string const &from, std::string const &to, bool onlyFirstMatch = false);
+vec<std::string> str_split(std::string const &to_split, std::string const &delimeter);
+
+
+//-------------------------------------
+// ... Binary Utils
+//-------------------------------------
+
+vec<u8> bin_read(std::string const &path);
+bool    bin_check_magic(std::span<const u8> bin, std::span<const u8> magic);
+
+
+//-------------------------------------
+// ... Files Utils
+//-------------------------------------
+
+std::string file_read(std::string const &input_file);
+
+bool file_write_append(std::string const &output_file, std::string const &to_write);
+bool file_write_trunc(std::string const &output_file, std::string const &to_write);
+
+bool file_write_append(std::string const &output_file, const char *data, usize data_size);
+bool file_write_trunc(std::string const &output_file, const char *data, usize data_size);
+
+bool file_check_extension(std::string const &input_file, std::string ext);
+
+
+//-------------------------------------
+// ... Math Utils
+//-------------------------------------
+
+f32 map(f32 value, f32 srcMin, f32 srcMax, f32 dstMin, f32 dstMax);
+f32 map_100(f32 value, f32 dstMin, f32 dstMax);
+
+bool fuzzyEq(f32 f1, f32 f2, f32 threshold = 0.01f);
+
+f32 clampAngle(f32 angle);
+
+#ifdef ALT_CPP_INCLUDE_GLM
+bool fuzzyEq(vec2 const &v1, vec2 const &v2, f32 t = 0.01f);
+bool fuzzyEq(vec3 const &v1, vec3 const &v2, f32 t = 0.01f);
+bool fuzzyEq(vec4 const &v1, vec4 const &v2, f32 t = 0.01f);
+
+template<typename T>
+inline bool isAligned(T const &a, T const &b, f32 margin = 0.f)
+{
+    return abs(glm::dot(glm::normalize(a), glm::normalize(b))) >= (1.f - f32_epsilon - margin);
+}
+#endif
 
 }  // namespace ac
+
+
+//=============================================================================
+//=============================================================================
+// ALT_CPP IMPLEMENTATIONs
+//=============================================================================
+//=============================================================================
+
+#ifdef ALT_CPP_IMPLEMENTATION
+
+#    ifndef _ALT_CPP_IMPLEMENTATION
+#        define _ALT_CPP_IMPLEMENTATION
+
+#        include <fstream>
+
+namespace ac
+{
+
+//-------------------------------------
+// ... Elapsed Timer
+//-------------------------------------
+
+void ElapsedTimer::reset()
+{
+    m_ref   = Clock::now();
+    m_valid = true;
+}
+f64 ElapsedTimer::elapsed_s() const
+{
+    return as(f64, elapsed()) * ns_to_s;
+}
+f64 ElapsedTimer::elapsed_ms() const
+{
+    return as(f64, elapsed()) * ns_to_ms;
+}
+f64 ElapsedTimer::elapsed_us() const
+{
+    return as(f64, elapsed()) * ns_to_us;
+}
+f64 ElapsedTimer::elapsed_ns() const
+{
+    return as(f64, elapsed());
+}
+bool ElapsedTimer::is_valid() const
+{
+    return m_valid;
+}
+i64 ElapsedTimer::elapsed() const
+{
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - m_ref).count();
+}
+
+
+//-------------------------------------
+// ... String Utils
+//-------------------------------------
+
+std::string str_replace(std::string to_replace, std::string const &from, std::string const &to, bool only_first_match)
+{
+    usize pos = 0;
+    while ((pos = to_replace.find(from)) < to_replace.size())
+    {
+        to_replace.replace(pos, from.length(), to);
+
+        if (only_first_match)
+        {
+            break;
+        }
+    }
+
+    return to_replace;
+}
+
+vec<std::string> str_split(std::string const &to_split, std::string const &delimeter)
+{
+    std::string      token;
+    vec<std::string> splitted;
+    usize            ini = 0;
+    usize            end = 0;
+
+    // Split and store the string body
+    while ((end = to_split.find(delimeter, ini)) < to_split.size())
+    {
+        token = to_split.substr(ini, end - ini);
+        ini   = end + delimeter.size();
+        splitted.push_back(token);
+    }
+
+    // Store the string tail
+    if (ini < to_split.size())
+    {
+        token = to_split.substr(ini);
+        splitted.push_back(token);
+    }
+
+    return splitted;
+}
+
+
+//-------------------------------------
+// ... Binary Utils
+//-------------------------------------
+
+vec<u8> bin_read(std::string const &path)
+{
+    std::ifstream file { path, std::ios::binary };
+    auto          fileBegin = std::istreambuf_iterator<char>(file);
+    auto          fileEnd   = std::istreambuf_iterator<char>();
+    return { fileBegin, fileEnd };
+}
+
+bool bin_check_magic(std::span<const u8> bin, std::span<const u8> magic)
+{
+    // Validation
+    if (magic.empty() || bin.size() < magic.size())
+    {
+        return false;
+    }
+    // Iteration
+    bool match = true;
+    for (size_t i = 0; i < magic.size(); ++i)
+    {
+        match &= (bin[i] == magic[i]);
+    }
+    // Result
+    return match;
+}
+
+
+//-------------------------------------
+// ...Files Utils
+//-------------------------------------
+
+std::string file_read(std::string const &input_file)
+{
+    std::ifstream file(input_file, std::ios::ate | std::ios::binary);
+    ac_defer(file.close());
+
+    if (!file.is_open())
+    {
+        return "";
+        ac_err("Issues opening file [r]: {}", input_file);
+    }
+
+    std::string content;
+    content.resize(file.tellg());
+    file.seekg(0, std::ios::beg);
+    file.read(&content[0], content.size());
+
+    return content;
+}
+
+bool file_write(std::string const &output_file, char const *data, usize data_size, std::ios_base::openmode mode)
+{
+    if (!data || data_size < 1)
+    {
+        return false;
+        ac_err("[file_write] Invalid data: {}", output_file);
+    }
+
+    std::ofstream file(output_file, std::ios::out | std::ios::binary | mode);
+    ac_defer(file.close());
+
+    if (!file.is_open())
+    {
+        return false;
+        ac_err("[file_write] Opening file: {}", output_file);
+    }
+
+    file.write(data, data_size);
+
+    return true;
+}
+bool file_write_append(std::string const &output_file, std::string const &to_write)
+{
+    return file_write(output_file, to_write.data(), to_write.size(), std::ios::app);
+}
+bool file_write_trunc(std::string const &output_file, std::string const &to_write)
+{
+    return file_write(output_file, to_write.data(), to_write.size(), std::ios::trunc);
+}
+bool file_write_append(std::string const &output_file, const char *data, usize data_size)
+{
+    return file_write(output_file, data, data_size, std::ios::app);
+}
+bool file_write_trunc(std::string const &output_file, const char *data, usize data_size)
+{
+    return file_write(output_file, data, data_size, std::ios::trunc);
+}
+
+bool file_check_extension(std::string const &input_file, std::string ext)
+{
+    auto to_check = input_file.substr(input_file.find_last_of('.') + 1);
+    std::transform(to_check.begin(), to_check.end(), to_check.begin(), ::tolower);
+
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+    return to_check == ext;
+}
+
+
+//-------------------------------------
+// ... Math Utils
+//-------------------------------------
+
+f32 map(f32 value, f32 srcMin, f32 srcMax, f32 dstMin, f32 dstMax)
+{
+    return dstMin + (dstMax - dstMin) * (value - srcMin) / (srcMax - srcMin);
+}
+f32 map_100(f32 value, f32 dstMin, f32 dstMax)
+{
+    return map(value, 0, 100, dstMin, dstMax);
+}
+bool fuzzyEq(f32 f1, f32 f2, f32 threshold)
+{
+    auto const diff = abs(f1 - f2);
+    auto const isEq = diff <= threshold;
+    return isEq;
+}
+f32 clampAngle(f32 angle)
+{
+    auto const turns = floorf(angle / 360.f);
+    return angle - 360.f * turns;
+}
+
+#        ifdef ALT_CPP_INCLUDE_GLM
+bool fuzzyEq(vec2 const &v1, vec2 const &v2, f32 t)
+{
+    return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t);
+}
+bool fuzzyEq(vec3 const &v1, vec3 const &v2, f32 t)
+{
+    return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t) && fuzzyEq(v1.z, v2.z, t);
+}
+bool fuzzyEq(vec4 const &v1, vec4 const &v2, f32 t)
+{
+    return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t) && fuzzyEq(v1.z, v2.z, t) && fuzzyEq(v1.w, v2.w, t);
+}
+#        endif
+
+
+//-------------------------------------
+// ...
+//-------------------------------------
+
+}  // namespace ac
+
+#    endif  // _ALT_CPP_IMPLEMENTATION
+
+#endif  // ALT_CPP_IMPLEMENTATION
+
+
+//=============================================================================
+//=============================================================================
+// PRINT HELPERS
+//=============================================================================
+//=============================================================================
+
+#ifdef ALT_CPP_INCLUDE_FMT
+
+
+//-------------------------------------
+// ... GLM
+//-------------------------------------
+
+#    ifdef ALT_CPP_INCLUDE_GLM
+template<glm::length_t C>
+struct fmt::formatter<glm::vec<C, float, glm::defaultp>>
+{
+    constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.begin(); }
+
+    template<typename FormatContext>
+    auto format(const glm::vec<C, float, glm::defaultp> &v, FormatContext &ctx) const -> decltype(ctx.out())
+    {
+        std::string s = "(";
+        for (glm::length_t i = 0; i < C; ++i)
+        {
+            s += fmt::format("{:.{}f},", v[i], mo::settings::log_float_precission);
+        }
+        s.erase(s.end() - 1, s.end());
+        s += ")";
+        return fmt::format_to(ctx.out(), "{}", s);
+    }
+};
+#    endif
+
+
+//-------------------------------------
+// ...
+//-------------------------------------
+
+#else
+
+
+// //-------------------------------------
+// // ... GLM
+// //-------------------------------------
+
+// #    ifdef ALT_CPP_INCLUDE_GLM
+// template<glm::length_t C>
+// struct fmt::formatter<glm::vec<C, float, glm::defaultp>>
+// {
+//     constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.begin(); }
+
+//     template<typename FormatContext>
+//     auto format(const glm::vec<C, float, glm::defaultp> &v, FormatContext &ctx) const -> decltype(ctx.out())
+//     {
+//         std::string s = "(";
+//         for (glm::length_t i = 0; i < C; ++i)
+//         {
+//             s += fmt::format("{:.{}f},", v[i], mo::settings::log_float_precission);
+//         }
+//         s.erase(s.end() - 1, s.end());
+//         s += ")";
+//         return fmt::format_to(ctx.out(), "{}", s);
+//     }
+// };
+// #    endif
+
+#endif
