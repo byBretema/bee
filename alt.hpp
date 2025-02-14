@@ -349,7 +349,10 @@ namespace TypeAlias_GLM
     using mat4 = glm::mat4;
 }  // namespace TypeAlias_GLM
 using namespace TypeAlias_GLM;
-
+#else
+namespace TypeAlias_GLM
+{
+}  // namespace TypeAlias_GLM
 #endif
 
 
