@@ -30,6 +30,7 @@ TEST_CASE("u64 min") { CHECK(ac::u64_min == std::numeric_limits<uint64_t>::min()
 TEST_CASE("u64 max") { CHECK(ac::u64_max == std::numeric_limits<uint64_t>::max()); }
 TEST_CASE("usize min") { CHECK(ac::usize_min == std::numeric_limits<size_t>::min()); }
 TEST_CASE("usize max") { CHECK(ac::usize_max == std::numeric_limits<size_t>::max()); }
+
 TEST_CASE("i8 min") { CHECK(ac::i8_min == std::numeric_limits<int8_t>::min()); }
 TEST_CASE("i8 max") { CHECK(ac::i8_max == std::numeric_limits<int8_t>::max()); }
 TEST_CASE("i16 min") { CHECK(ac::i16_min == std::numeric_limits<int16_t>::min()); }
@@ -40,9 +41,11 @@ TEST_CASE("i64 min") { CHECK(ac::i64_min == std::numeric_limits<int64_t>::min())
 TEST_CASE("i64 max") { CHECK(ac::i64_max == std::numeric_limits<int64_t>::max()); }
 TEST_CASE("isize min") { CHECK(ac::isize_min == std::numeric_limits<ptrdiff_t>::min()); }
 TEST_CASE("isize max") { CHECK(ac::isize_max == std::numeric_limits<ptrdiff_t>::max()); }
+
 TEST_CASE("f32 min") { CHECK(ac::f32_min == std::numeric_limits<float>::min()); }
 TEST_CASE("f32 max") { CHECK(ac::f32_max == std::numeric_limits<float>::max()); }
 TEST_CASE("f32 epsilon") { CHECK(ac::f32_epsilon == std::numeric_limits<float>::epsilon()); }
+
 TEST_CASE("f64 min") { CHECK(ac::f64_min == std::numeric_limits<double>::min()); }
 TEST_CASE("f64 max") { CHECK(ac::f64_max == std::numeric_limits<double>::max()); }
 TEST_CASE("f64 epsilon") { CHECK(ac::f64_epsilon == std::numeric_limits<double>::epsilon()); }

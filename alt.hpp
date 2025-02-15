@@ -261,9 +261,9 @@ using f32 = float;
 using f64 = double;
 inline constexpr f32 f32_min = std::numeric_limits<f32>::min();
 inline constexpr f32 f32_max = std::numeric_limits<f32>::max();
+inline constexpr f32 f32_epsilon = std::numeric_limits<f32>::epsilon();
 inline constexpr f64 f64_min = std::numeric_limits<f64>::min();
 inline constexpr f64 f64_max = std::numeric_limits<f64>::max();
-inline constexpr f32 f32_epsilon = std::numeric_limits<f32>::epsilon();
 inline constexpr f64 f64_epsilon = std::numeric_limits<f64>::epsilon();
 
 } // namespace TypeAlias_Numbers
@@ -320,6 +320,9 @@ using arr = std::array<T, S>;
 // Optional
 template <typename T>
 using opt = std::optional<T>;
+
+// // String
+// using str = std::string;
 } // namespace TypeAlias_Containers
 static inline constexpr auto none = std::nullopt;
 using namespace TypeAlias_Containers;
