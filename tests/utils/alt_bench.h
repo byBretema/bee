@@ -86,7 +86,7 @@ void RunBenchmarks() {
         using ns = std::chrono::nanoseconds;
         auto const elapsed = std::chrono::duration_cast<ns>(end - start).count();
 
-        std::cout << "[alt_bench] :: " << name << " | " << double(elapsed) * 1e-6 << " ms\n";
+        std::cout << "[alt_bench] | " << name << " | " << double(elapsed) * 1e-6 << " ms\n";
     }
 }
 

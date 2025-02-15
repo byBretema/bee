@@ -1,5 +1,5 @@
 #include "utils/alt_test.h"
-#define ALT_BENCH_ENABLE_STDOUT
+// #define ALT_BENCH_ENABLE_STDOUT
 #include "utils/alt_bench.h"
 
 #include <array>

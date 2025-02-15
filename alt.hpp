@@ -150,25 +150,25 @@ private:
 #define ac_err(msg, ...) fmt::println("[ERRO] | {}:{} | {}", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
 #define ac_debug(msg, ...) fmt::println("[DBUG] | {}:{} | {}", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
 #else
-#warning "WARN: Not using fmt-lib will improve experience (and performance) of ac_fmt/info/err/.. methods a lot."
+#warning "[alt_cpp] :: Using fmt-lib will improve experience (and performance) of ac_fmt/info/err/.. methods a lot."
 #include <iostream>
 namespace ac::detail {
 std::string format(std::string msg, std::vector<std::string> const &args);
-std::vector<std::string> to_iterable();
+std::vector<std::string> to_stringlist();
 
 template <typename T, typename... Args>
-std::vector<std::string> to_iterable(T &&first, Args &&...args) {
+std::vector<std::string> to_stringlist(T &&first, Args &&...args) {
     std::ostringstream oss;
     oss << std::boolalpha << first;
     std::vector<std::string> result { oss.str() };
-    std::vector<std::string> rest = to_iterable(std::forward<Args>(args)...);
+    std::vector<std::string> rest = to_stringlist(std::forward<Args>(args)...);
     result.insert(result.end(), rest.begin(), rest.end());
     return result;
 }
 } // namespace ac::detail
 
 // String Builder
-#define ac_fmt(msg, ...) ac::detail::format(msg, ac::detail::to_iterable(__VA_ARGS__))
+#define ac_fmt(msg, ...) ac::detail::format(msg, ac::detail::to_stringlist(__VA_ARGS__))
 
 // Logging helpers
 #define ac_info(msg, ...)                                                                                              \
@@ -477,7 +477,7 @@ std::string format(std::string msg, std::vector<std::string> const &args) {
     msg += "{ " + args[args.size() - 1] + " }";
     return msg;
 }
-std::vector<std::string> to_iterable() { return {}; }
+std::vector<std::string> to_stringlist() { return {}; }
 } // namespace detail
 #endif
 
