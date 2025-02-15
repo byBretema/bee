@@ -1,129 +1,88 @@
-#define DOCTEST_CONFIG_IMPLEMENT
-#include "doctest.h"
+#include "utils/alt_test.h"
+#define ALT_BENCH_ENABLE_STDOUT
+#include "utils/alt_bench.h"
 
-#define ALT_CPP_IMPLEMENTATION
-#define ALT_CPP_INCLUDE_FMT
-// #define ALT_CPP_INCLUDE_GLM
-#include "../alt.hpp"
-
-#include <iostream>
 #include <array>
+#include <iostream>
 #include <vector>
 
-#include <cstdio>
+
+#define ALT_CPP_IMPLEMENTATION
+// #define ALT_CPP_INCLUDE_FMT
+// #define ALT_CPP_INCLUDE_GLM
+#include "../alt.hpp"
 
 using namespace ac::TypeAlias_Numbers;
 using namespace ac::TypeAlias_GLM;
 
-//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-struct DISABLE_OUTPUT
-{
-    DISABLE_OUTPUT()
-    {
-        std::fflush(stdout);
-#ifdef _WIN32
-        null_file = freopen("NUL", "w", stdout);
-#else
-        null_file = freopen("/dev/null", "w", stdout);
-#endif
-    }
-    ~DISABLE_OUTPUT()
-    {
-        std::fflush(stdout);
-        if (null_file)
-        {
-#ifdef _WIN32
-            freopen("CON", "w", stdout);  // Windows console device
-#else
-            freopen("/dev/tty", "w", stdout);  // Linux/macOS console device
-#endif
-        }
-    }
-
-private:
-    FILE *null_file = nullptr;
-};
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-void run_tests()
-{
-    doctest::Context ctx;
-    ctx.setOption("no-version", true);
-    ctx.setOption("no-intro", true);
-
-    int res = ctx.run();
-    if (ctx.shouldExit())
-        exit(res);
-}
-
+//::: TESTS
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-template<typename T>
-void run_benchmark(const char* name, uint32_t times, T fn)
-{
-    std::chrono::high_resolution_clock::time_point start;
-    std::chrono::high_resolution_clock::time_point end;
-    {
-        DISABLE_OUTPUT scoped;
+TEST_CASE("u8 min") { CHECK(ac::u8_min == std::numeric_limits<uint8_t>::min()); }
+TEST_CASE("u8 max") { CHECK(ac::u8_max == std::numeric_limits<uint8_t>::max()); }
+TEST_CASE("u16 min") { CHECK(ac::u16_min == std::numeric_limits<uint16_t>::min()); }
+TEST_CASE("u16 max") { CHECK(ac::u16_max == std::numeric_limits<uint16_t>::max()); }
+TEST_CASE("u32 min") { CHECK(ac::u32_min == std::numeric_limits<uint32_t>::min()); }
+TEST_CASE("u32 max") { CHECK(ac::u32_max == std::numeric_limits<uint32_t>::max()); }
+TEST_CASE("u64 min") { CHECK(ac::u64_min == std::numeric_limits<uint64_t>::min()); }
+TEST_CASE("u64 max") { CHECK(ac::u64_max == std::numeric_limits<uint64_t>::max()); }
+TEST_CASE("usize min") { CHECK(ac::usize_min == std::numeric_limits<size_t>::min()); }
+TEST_CASE("usize max") { CHECK(ac::usize_max == std::numeric_limits<size_t>::max()); }
+TEST_CASE("i8 min") { CHECK(ac::i8_min == std::numeric_limits<int8_t>::min()); }
+TEST_CASE("i8 max") { CHECK(ac::i8_max == std::numeric_limits<int8_t>::max()); }
+TEST_CASE("i16 min") { CHECK(ac::i16_min == std::numeric_limits<int16_t>::min()); }
+TEST_CASE("i16 max") { CHECK(ac::i16_max == std::numeric_limits<int16_t>::max()); }
+TEST_CASE("i32 min") { CHECK(ac::i32_min == std::numeric_limits<int32_t>::min()); }
+TEST_CASE("i32 max") { CHECK(ac::i32_max == std::numeric_limits<int32_t>::max()); }
+TEST_CASE("i64 min") { CHECK(ac::i64_min == std::numeric_limits<int64_t>::min()); }
+TEST_CASE("i64 max") { CHECK(ac::i64_max == std::numeric_limits<int64_t>::max()); }
+TEST_CASE("isize min") { CHECK(ac::isize_min == std::numeric_limits<ptrdiff_t>::min()); }
+TEST_CASE("isize max") { CHECK(ac::isize_max == std::numeric_limits<ptrdiff_t>::max()); }
+TEST_CASE("f32 min") { CHECK(ac::f32_min == std::numeric_limits<float>::min()); }
+TEST_CASE("f32 max") { CHECK(ac::f32_max == std::numeric_limits<float>::max()); }
+TEST_CASE("f32 epsilon") { CHECK(ac::f32_epsilon == std::numeric_limits<float>::epsilon()); }
+TEST_CASE("f64 min") { CHECK(ac::f64_min == std::numeric_limits<double>::min()); }
+TEST_CASE("f64 max") { CHECK(ac::f64_max == std::numeric_limits<double>::max()); }
+TEST_CASE("f64 epsilon") { CHECK(ac::f64_epsilon == std::numeric_limits<double>::epsilon()); }
 
-        start = std::chrono::high_resolution_clock::now();
-        for (uint32_t i = 0; i < times; ++i)
-        {
-            fn();
-        }
-        end = std::chrono::high_resolution_clock::now();
-    }
+TEST_CASE("bit 1") { CHECK(ac_bit(1) == 2); }
+TEST_CASE("bit 2") { CHECK(ac_bit(2) == 4); }
 
-    using ns           = std::chrono::nanoseconds;
-    auto const elapsed = std::chrono::duration_cast<ns>(end - start).count();
 
-    std::cout << "[docbench] - " << name << ": " <<  double(elapsed) * 1e-6 << " ms\n";
-}
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//::: BENCHMARKS
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-void run_benchmarks()
-{
-    run_benchmark("cout", 5, [](){
-        std::cout << "[INFO] | " << __FILE__ << ":" << __LINE__ << " | " << "2 elevated to " << 1 << " is " << ac_bit(1) << "\n";
-    });
-    run_benchmark("ac_info", 5, [](){
-        ac_info("2 elevated to {} is {} = {}", 1, ac_bit(1), true);
-    });
+inline int32_t gBenchCount = 5;
+
+BENCH_CASE("std cout", gBenchCount,
+           std::cout << "[INFO] | " << __FILE__ << ":" << __LINE__ << " | " << "2 elevated to " << 1 << " is "
+                     << ac_bit(1) << "\n");
+
+BENCH_CASE("ac_info", gBenchCount, ac_info("2 elevated to {} is {} = {}", 1, ac_bit(1), true));
 
 #ifdef ALT_CPP_INCLUDE_GLM
-    run_benchmark("ac_info_glm_vec3", 5, [](){
-        ac_info("glm vec3 {}", glmstr(vec3(2.f)));
-    });
+BENCH_CASE("ac_info_glm_vec3", 5, ac_info("glm vec3 {}", glmstr(vec3(2.f))));
 #endif
-}
+
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//::: ENTRY POINT
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
+
     std::cout << "\n";
     std::cout << "===========================================================\n";
     std::cout << "== RUNNING TESTs\n";
     std::cout << "===========================================================\n";
-    run_tests();
+    ac::RunTests();
 
     std::cout << "\n";
     std::cout << "===========================================================\n";
     std::cout << "== RUNNING \"BENCHMARKs\"\n";
     std::cout << "===========================================================\n";
-    run_benchmarks();
+    ac::RunBenchmarks();
 }
-
-//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-TEST_CASE("testing the factorial function")
-{
-    CHECK(ac::u8_min == std::numeric_limits<uint8_t>::min());
-}
-TEST_CASE("testing the factorial function")
-{
-    CHECK(ac::u8_max == std::numeric_limits<uint8_t>::max());
-}
-
-//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
