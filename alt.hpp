@@ -113,14 +113,14 @@
 #ifndef defer
 #define defer(fn) ac_defer(fn)
 #else
-#warning "MACRO_WARN: 'defer' is already defined using it might end in a missbehave"
+#warning "[alt_cpp] 'defer' is already defined using it might end in a missbehave"
 #endif
 
 #define ac_deferc(fn) const auto AC_CONCAT(defer__, __LINE__) = ac::detail::Defer([=]() { fn; })
 #ifndef deferc
 #define deferc(fn) ac_deferc(fn)
 #else
-#warning "MACRO_WARN: 'deferc' is already defined using it might end in a missbehave"
+#warning "[alt_cpp] 'deferc' is already defined using it might end in a missbehave"
 #endif
 
 namespace ac::detail {
@@ -204,7 +204,7 @@ public:                                                                         
 #ifndef as
 #define as(T, x) ac_as(T, x)
 #else
-#warning "MACRO_WARN: 'as' is already defined using it might end in a missbehave"
+#warning "[alt_cpp] 'as' is already defined using it might end in a missbehave"
 #endif
 
 
@@ -456,8 +456,8 @@ inline bool isAligned(T const &a, T const &b, f32 margin = 0.f) {
 
 #ifdef ALT_CPP_IMPLEMENTATION
 
-#ifndef _ALT_CPP_IMPLEMENTATION
-#define _ALT_CPP_IMPLEMENTATION
+#ifndef __ALT_CPP_IMPLEMENTATION_GUARD
+#define __ALT_CPP_IMPLEMENTATION_GUARD
 
 #include <fstream>
 
@@ -663,6 +663,6 @@ bool fuzzyEq(vec4 const &v1, vec4 const &v2, f32 t) {
 
 } // namespace ac
 
-#endif // _ALT_CPP_IMPLEMENTATION
+#endif // __ALT_CPP_IMPLEMENTATION_GUARD
 
 #endif // ALT_CPP_IMPLEMENTATION
