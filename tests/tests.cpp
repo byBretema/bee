@@ -1,7 +1,9 @@
-// #include "utils/alt_test.h"
-// #define ALT_BENCH_ENABLE_STDOUT
+
+#define ALT_TEST_IMPLEMENTATION
+#include "utils/alt_test.hpp"
+
 #define ALT_BENCH_IMPLEMENTATION
-#include "utils/alt_bench.h"
+#include "utils/alt_bench.hpp"
 
 #include <array>
 #include <iostream>
@@ -51,8 +53,10 @@ using namespace ac::TypeAlias_GLM;
 // TEST_CASE("f64 max") { CHECK(ac::f64_max == std::numeric_limits<double>::max()); }
 // TEST_CASE("f64 epsilon") { CHECK(ac::f64_epsilon == std::numeric_limits<double>::epsilon()); }
 
-// TEST_CASE("bit 1") { CHECK(ac_bit(1) == 2); }
-// TEST_CASE("bit 2") { CHECK(ac_bit(2) == 4); }
+TEST_WRAP("Bit Operations", {
+    TEST_CASE("bit 1", return ac_bit(1) != 2;);
+    TEST_CASE("bit 2", return ac_bit(2) == 4;);
+});
 
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -78,11 +82,11 @@ BENCH_CASE("ac_info_glm_vec3", 5, ac_info("glm vec3 {}", glmstr(vec3(2.f))));
 
 int main(int argc, char **argv) {
 
-    // std::cout << "\n";
-    // std::cout << "===========================================================\n";
-    // std::cout << "== RUNNING TESTs\n";
-    // std::cout << "===========================================================\n";
-    // ac::test::run();
+    std::cout << "\n";
+    std::cout << "===========================================================\n";
+    std::cout << "== RUNNING TESTs\n";
+    std::cout << "===========================================================\n";
+    ac::test::run();
 
     std::cout << "\n";
     std::cout << "===========================================================\n";

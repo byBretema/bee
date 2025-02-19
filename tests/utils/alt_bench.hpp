@@ -34,13 +34,13 @@
 
 */
 
+#include <cstdint>
 #include <cstdio>
 #include <iostream>
 
 #include <chrono>
 
 #include <functional>
-#include <tuple>
 #include <vector>
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -59,12 +59,12 @@ void run();
 
 #define __AC_BENCH_CONCAT2(l, r) l##r
 #define __AC_BENCH_CONCAT1(l, r) __AC_BENCH_CONCAT2(l, r)
-#define AC_BENCH_CONCAT(l, r) __AC_BENCH_CONCAT1(l, r)
+#define __AC_BENCH_CONCAT(l, r) __AC_BENCH_CONCAT1(l, r)
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 #define BENCH_CASE(name, times, code)                                                                                  \
-    static inline int AC_BENCH_CONCAT(bench_case__, __LINE__) = [] {                                                   \
+    static inline int __AC_BENCH_CONCAT(bench_case__, __LINE__) = [] {                                                 \
         ac::bench::detail::add(name, times, [] { code; });                                                             \
         return 0;                                                                                                      \
     }();
