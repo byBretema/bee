@@ -487,8 +487,8 @@ std::vector<std::string> to_stringlist() { return {}; }
 //-------------------------------------
 
 void ElapsedTimer::reset() {
-    m_ref = Clock::now();
     m_valid = true;
+    m_ref = Clock::now();
 }
 f64 ElapsedTimer::elapsed_s() const { return as(f64, elapsed()) * ns_to_s; }
 f64 ElapsedTimer::elapsed_ms() const { return as(f64, elapsed()) * ns_to_ms; }
@@ -496,7 +496,8 @@ f64 ElapsedTimer::elapsed_us() const { return as(f64, elapsed()) * ns_to_us; }
 f64 ElapsedTimer::elapsed_ns() const { return as(f64, elapsed()); }
 bool ElapsedTimer::is_valid() const { return m_valid; }
 i64 ElapsedTimer::elapsed() const {
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - m_ref).count();
+    auto const now = Clock::now();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(now - m_ref).count();
 }
 
 
@@ -508,12 +509,10 @@ std::string str_replace(std::string to_replace, std::string const &from, std::st
     usize pos = 0;
     while ((pos = to_replace.find(from)) < to_replace.size()) {
         to_replace.replace(pos, from.length(), to);
-
         if (only_first_match) {
             break;
         }
     }
-
     return to_replace;
 }
 

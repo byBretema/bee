@@ -63,7 +63,7 @@ void run();
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-#define BENCH_CASE(name, times, code)                                                                                  \
+#define BENCH(name, times, code)                                                                                       \
     static inline int __AC_BENCH_CONCAT(bench_case__, __LINE__) = [] {                                                 \
         ac::bench::detail::add(name, times, [] { code; });                                                             \
         return 0;                                                                                                      \
@@ -116,11 +116,11 @@ struct Item {
     int32_t times = 1;
     std::function<void()> fn = nullptr;
 };
-inline std::vector<Item> gList;
+inline std::vector<Item> g_benchmarks;
 
 
 void add(std::string const &name, int32_t times, std::function<void()> const &fn) {
-    gList.emplace_back(name, times, fn);
+    g_benchmarks.emplace_back(name, times, fn);
 }
 
 } // namespace detail
@@ -129,10 +129,15 @@ void add(std::string const &name, int32_t times, std::function<void()> const &fn
 
 void run() {
 
+    std::cout << "\n";
+    std::cout << "===========================================================\n";
+    std::cout << "😴 RUNNING BENCHMARKs\n";
+    std::cout << "===========================================================\n";
+
     std::chrono::high_resolution_clock::time_point start;
     std::chrono::high_resolution_clock::time_point end;
 
-    for (auto const &[name, times, fn] : detail::gList) {
+    for (auto const &[name, times, fn] : detail::g_benchmarks) {
 
 #if !defined(ALT_BENCH_ENABLE_STDOUT)
         detail::stdout_off();
@@ -152,7 +157,7 @@ void run() {
         using ns = std::chrono::nanoseconds;
         auto const elapsed = std::chrono::duration_cast<ns>(end - start).count();
 
-        std::cout << "[alt_bench] | " << name << " | " << double(elapsed) * 1e-6 << " ms\n";
+        std::cout << "⌚ " << name << " | " << double(elapsed) * 1e-6 << " ms\n";
     }
 }
 
