@@ -5,7 +5,7 @@
     An alternative take on cpp.
     Basically some aliases and helpers.
 
-    Also a bunch of code that I found myself repeating between project.
+    Also a bunch of code that I found myself repeating between projects.
 
     No warranty implied, use at your own risk.
 
