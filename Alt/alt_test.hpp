@@ -24,11 +24,10 @@
 
 */
 
+#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
-
-#include <functional>
 #include <vector>
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -41,13 +40,15 @@ struct Error {
     const char *file = "";
     int line = -1;
 };
-struct Test {
-    const char *name = "";
-    std::function<void(Test *test)> fn = nullptr;
+struct Result {
     std::vector<Error> errors {};
     int32_t total_count = 0;
     int32_t fail_count = 0;
     int32_t pass_count = 0;
+};
+struct Test {
+    const char *name = "";
+    Result (*fn)(void) = nullptr;
 };
 
 void add(Test const &test);
@@ -69,18 +70,22 @@ void run();
 #define TEST(name, code)                                                                                               \
     static inline int __AC_TEST_CONCAT(test_case__, __LINE__) = [] {                                                   \
         ac::test::detail::Test test { name };                                                                          \
-        test.fn = [](Test *test) { code; };                                                                            \
+        test.fn = []() {                                                                                               \
+            ac::test::detail::Result result;                                                                           \
+            code;                                                                                                      \
+            return result;                                                                                             \
+        };                                                                                                             \
         ac::test::detail::add(test);                                                                                   \
         return 0;                                                                                                      \
     }();
 
 #define CHECK(name, condition)                                                                                         \
-    ++(*test).total_count;                                                                                             \
+    result.total_count++;                                                                                              \
     if ((condition)) {                                                                                                 \
-        ++(*test).pass_count;                                                                                          \
+        result.pass_count++;                                                                                           \
     } else {                                                                                                           \
-        (*test).errors.emplace_back(name, __FILE__, __LINE__);                                                         \
-        ++(*test).fail_count;                                                                                          \
+        result.errors.emplace_back(name, __FILE__, __LINE__);                                                          \
+        result.fail_count++;                                                                                           \
     }
 
 #define TEST_CHECK(name, code) TEST(name, CHECK(name, code));
@@ -93,8 +98,6 @@ void run();
 // ALT_TEST_IMPLEMENTATION
 //=============================================================================
 //=============================================================================
-
-#define ALT_TEST_IMPLEMENTATION
 
 #ifdef ALT_TEST_IMPLEMENTATION
 
@@ -134,21 +137,24 @@ void run() {
     int32_t pass_count = 0;
     int32_t fail_count = 0;
 
-    for (auto const &test : detail::g_tests) {
+    for (auto &test : detail::g_tests) {
 
-        if (test.fn) {
-            test.fn(&test);
+        if (!test.fn) {
+            assert(0);
+            continue;
         }
 
-        total_count += test.total_count;
-        total_count += test.pass_count;
-        total_count += test.fail_count;
+        detail::Result const result = test.fn();
 
-        for (auto const &[name, file, line] : test.errors) {
+        total_count += result.total_count;
+        pass_count += result.pass_count;
+        fail_count += result.fail_count;
 
-            auto const pname = test.total_count < 2 ? "" : test.name;
-            auto const psep = test.total_count < 2 ? "" : " :: ";
-            std::cout << "🚩 " << pname << psep << name << " ( " << file << ":" << line << " )\n";
+        for (auto const &[name, file, line] : result.errors) {
+
+            auto const pname = result.total_count < 2 ? "" : test.name;
+            auto const psep = result.total_count < 2 ? "" : " :: ";
+            std::cout << "🚩 " << pname << psep << name << "  ( " << file << ":" << line << " )\n";
 
             continue;
         }

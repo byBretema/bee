@@ -3,9 +3,11 @@
 #include "../Alt/alt_test.hpp"
 
 #define ALT_BENCH_IMPLEMENTATION
+#define ALT_BENCH_STDOUT_ONCE
 #include "../Alt/alt_bench.hpp"
 
 #define ALT_CPP_IMPLEMENTATION
+#define ALT_CPP_USE_FAKE_FMT
 // #define ALT_CPP_INCLUDE_FMT
 // #define ALT_CPP_INCLUDE_GLM
 #include "../Alt/alt_cpp.hpp"
@@ -46,7 +48,7 @@ TEST("Numeric Aliases", {
     CHECK("f32 max", ac::f32_max == std::numeric_limits<float>::max());
     CHECK("f32 epsilon", ac::f32_epsilon == std::numeric_limits<float>::epsilon());
 
-    CHECK("f64 min", ac::f64_min == std::numeric_limits<double>::min());
+    CHECK("f64 min", ac::f64_min != std::numeric_limits<double>::min());
     CHECK("f64 max", ac::f64_max == std::numeric_limits<double>::max());
     CHECK("f64 epsilon", ac::f64_epsilon == std::numeric_limits<double>::epsilon());
 });
@@ -54,7 +56,7 @@ TEST("Numeric Aliases", {
 TEST("Bit Operations", {
     CHECK("Bit 1", ac_bit(1) == 2);
     CHECK("Bit 2", ac_bit(2) == 4);
-    CHECK("Bit 3", ac_bit(3) == 8);
+    CHECK("Bit 3", ac_bit(3) != 8);
     CHECK("Bit 4", ac_bit(4) == 16);
     CHECK("Bit 5", ac_bit(5) == 32);
 });
@@ -63,28 +65,42 @@ TEST("Defer", {
     i32 defer_count = 0;
     {
         defer(defer_count += 2);
-        CHECK("Before defer", defer_count == 0);
+        CHECK("Before defer", defer_count != 0);
     }
     CHECK("After defer", defer_count == 2);
 });
 
+TEST("Defer", {
+    i32 defer_count = 0;
+    {
+        defer(defer_count += 2);
+        CHECK("Before", defer_count == 0);
+    }
+    CHECK("After", defer_count == 2);
+});
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 //::: BENCHMARKS
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-inline int32_t BENCH_COUNT = 5;
+inline int32_t BENCH_COUNT = 5000;
 
-BENCH("std cout", BENCH_COUNT, {
-    std::cout << "[INFO] | " << __FILE__ << ":" << __LINE__ //
-              << " | " << "2 elevated to " << 1 << " is "   //
-              << ac_bit(1) << "\n";
+BENCH("StdCout", BENCH_COUNT, {
+    std::cout << std::boolalpha << "[INFO] | " << __FILE__ << ":" << __LINE__ //
+              << " | " << "2 elevated to " << 1 << " is "                     //
+              << ac_bit(1) << " == " << true << "\n";
 });
 
-BENCH("ac_info", BENCH_COUNT, ac_info("2 elevated to {} is {} = {}", 1, ac_bit(1), true));
+#if defined(ALT_CPP_USE_FAKE_FMT)
+BENCH("AC Info (fakefmt)", BENCH_COUNT, ac_info("2 elevated to {} is {} == {}", 1, ac_bit(1), true));
+#elif defined(ALT_CPP_INCLUDE_FMT)
+BENCH("AC Info (fmtlib)", BENCH_COUNT, ac_info("2 elevated to {} is {} == {}", 1, ac_bit(1), true));
+#else
+BENCH("AC Info (apped)", BENCH_COUNT, ac_info("2 elevated to {} is {} == {}", 1, ac_bit(1), true));
+#endif
 
 #ifdef ALT_CPP_INCLUDE_GLM
-BENCH("ac_info_glm_vec3", 5, ac_info("glm vec3 {}", glmstr(vec3(2.f))));
+BENCH("ac_info_glm_vec3", 5, ac_info("glm vec3 {}", glmstr(Vec3(2.f))));
 #endif
 
 
@@ -94,7 +110,6 @@ BENCH("ac_info_glm_vec3", 5, ac_info("glm vec3 {}", glmstr(vec3(2.f))));
 
 int main() {
     ac::test::run();
-    std::cout << "\n";
+    ac_print("");
     ac::bench::run();
-    std::cout << "\n";
 }

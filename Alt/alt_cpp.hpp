@@ -30,7 +30,8 @@
     =============================================
 
     -- If you use fmt-lib, 'alt' will include basic fmt header files and
-    expose, basic log methods: ac_info/warn/err/debug("", ...)
+    expose, basic log methods: ac_info/warn/err/debug("", ...),
+    this will also undefine 'ALT_CPP_USE_FAKE_FMT'
 
     #define ALT_CPP_INCLUDE_FMT
 
@@ -38,6 +39,10 @@
 
     #define ALT_CPP_INCLUDE_GLM
 
+    -- Use a naïve fmt-like custom implemenation (will be disabled if
+    'ALT_CPP_INCLUDE_FMT' is present)
+
+    #define ALT_CPP_USE_FAKE_FMT
 */
 
 
@@ -141,23 +146,55 @@ private:
 //=========================================================
 
 #ifdef ALT_CPP_INCLUDE_FMT
+#undef ALT_CPP_USE_FAKE_FMT
 // String Builder
 #define ac_fmt(msg, ...) fmt::format(msg, __VA_ARGS__)
-
-// Logging helpers
-#define ac_info(msg, ...) fmt::println("[INFO] | {}:{} | {}", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
-#define ac_warn(msg, ...) fmt::println("[WARN] | {}:{} | {}", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
-#define ac_err(msg, ...) fmt::println("[ERRO] | {}:{} | {}", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
-#define ac_debug(msg, ...) fmt::println("[DBUG] | {}:{} | {}", __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
+// Log Builder
+#define __ac_log(level, msg, ...) fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
+#define __ac_log_flat(msg, ...) fmt::println("{}", ac_fmt(msg, __VA_ARGS__))
 #else
+#if !defined(ALT_CPP_USE_FAKE_FMT)
 #warning "[alt_cpp] :: Using fmt-lib will improve experience (and performance) of ac_fmt/info/err/.. methods a lot."
+#endif
 #include <iostream>
-namespace ac::detail {
-std::string format(std::string msg, std::vector<std::string> const &args);
-std::vector<std::string> to_stringlist();
+#include <regex>
 
+// #ifdef _WIN32
+// #include <windows.h>
+// static const int ___ALT_CPP_COUT_SETUP = []() {
+//     SetConsoleOutputCP(CP_UTF8);
+//     return 0;
+// }();
+// #endif
+
+namespace ac::detail::format {
+inline std::string format(std::string msg, std::vector<std::string> const &args) {
+    if (args.size() < 1) {
+        return msg;
+    }
+#if !defined(ALT_CPP_USE_FAKE_FMT) // Append the args at the string's end
+    msg += " | <== ";
+    for (size_t i = 0; i < args.size() - 1; ++i) {
+        msg += "{ " + args[i] + " } : ";
+    }
+    msg += "{ " + args[args.size() - 1] + " }";
+#else                              // Replace the {} in the string
+    static const std::regex pattern("\\{:?.?:?[^\\}^ ]*\\}"); // Trying to capture fmt mini-language
+    auto args_it = args.begin();
+
+    std::sregex_iterator begin(msg.begin(), msg.end(), pattern);
+    std::sregex_iterator end;
+
+    for (auto i = begin; i != end && args_it != args.end(); ++i, ++args_it) {
+        msg.replace(i->position(), i->length(), *args_it);
+        begin = std::sregex_iterator(msg.begin(), msg.end(), pattern); // Reset iterator after modification
+    }
+#endif
+    return msg;
+}
+inline std::vector<std::string> to_stringlist() { return {}; }
 template <typename T, typename... Args>
-std::vector<std::string> to_stringlist(T &&first, Args &&...args) {
+inline std::vector<std::string> to_stringlist(T &&first, Args &&...args) {
     std::ostringstream oss;
     oss << std::boolalpha << first;
     std::vector<std::string> result { oss.str() };
@@ -165,21 +202,23 @@ std::vector<std::string> to_stringlist(T &&first, Args &&...args) {
     result.insert(result.end(), rest.begin(), rest.end());
     return result;
 }
-} // namespace ac::detail
+} // namespace ac::detail::format
 
 // String Builder
-#define ac_fmt(msg, ...) ac::detail::format(msg, ac::detail::to_stringlist(__VA_ARGS__))
+#define ac_fmt(msg, ...) ac::detail::format::format(msg, ac::detail::format::to_stringlist(__VA_ARGS__))
+
+// Log Builder
+#define __ac_log(level, msg, ...)                                                                                      \
+    std::cout << "[" << level << "] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
+#define __ac_log_flat(msg, ...) std::cout << ac_fmt(msg, __VA_ARGS__) << "\n"
+#endif
 
 // Logging helpers
-#define ac_info(msg, ...)                                                                                              \
-    std::cout << "[INFO] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
-#define ac_warn(msg, ...)                                                                                              \
-    std::cout << "[WARN] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
-#define ac_err(msg, ...)                                                                                               \
-    std::cout << "[ERRO] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
-#define ac_debug(msg, ...)                                                                                             \
-    std::cout << "[DBUG] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
-#endif
+#define ac_print(msg, ...) __ac_log_flat(msg, __VA_ARGS__)
+#define ac_info(msg, ...) __ac_log("INFO", msg, __VA_ARGS__)
+#define ac_warn(msg, ...) __ac_log("WARN", msg, __VA_ARGS__)
+#define ac_err(msg, ...) __ac_log("ERRO", msg, __VA_ARGS__)
+#define ac_debug(msg, ...) __ac_log("DEBG", msg, __VA_ARGS__)
 
 //=========================================================
 //== OTHER MACROS
@@ -513,25 +552,6 @@ inline b8 isAligned(T const &a, T const &b, f32 margin = 0.f) {
 #include <fstream>
 
 namespace ac {
-
-//-------------------------------------
-// ... Logger
-//-------------------------------------
-
-#ifndef ALT_CPP_INCLUDE_FMT
-namespace detail {
-std::string format(std::string msg, std::vector<std::string> const &args) {
-    msg += " | <== ";
-    for (size_t i = 0; i < args.size() - 1; ++i) {
-        msg += "{ " + args[i] + " } : ";
-    }
-    msg += "{ " + args[args.size() - 1] + " }";
-    return msg;
-}
-std::vector<std::string> to_stringlist() { return {}; }
-} // namespace detail
-#endif
-
 
 //-------------------------------------
 // ... Elapsed Timer

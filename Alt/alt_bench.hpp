@@ -28,9 +28,15 @@
 
     -- By default we redirect the output of the benchmarked code during its execution
     so you don't see the same log hundreds or thousands of times, you can avoid that behaviour
-    using below flag before including this file.
+    using below flag before including this file. (Do you really want that?)
 
-    #define ALT_BENCH_ENABLE_STDOUT
+    #define ALT_BENCH_STDOUT_ENABLE
+
+    -- By default we redirect the output of the benchmarked code during its execution
+    so you don't see the same log hundreds or thousands of times, you can use below flag to run
+    the funtion ONCE with the stdout enabled, the rest of 'times' will be disabled.
+
+    #define ALT_BENCH_STDOUT_ONCE
 
 */
 
@@ -40,6 +46,7 @@
 
 #include <chrono>
 
+#include <format>
 #include <functional>
 #include <vector>
 
@@ -48,7 +55,7 @@
 namespace ac::bench {
 
 namespace detail {
-void add(std::string const &name, int32_t times, std::function<void()> const &fn);
+void add(std::string const &name, int32_t times, std::function<void()> const &fn, const char *file, int line);
 }
 
 void run();
@@ -65,7 +72,7 @@ void run();
 
 #define BENCH(name, times, code)                                                                                       \
     static inline int __AC_BENCH_CONCAT(bench_case__, __LINE__) = [] {                                                 \
-        ac::bench::detail::add(name, times, [] { code; });                                                             \
+        ac::bench::detail::add(name, times, [] { code; }, __FILE__, __LINE__);                                         \
         return 0;                                                                                                      \
     }();
 
@@ -86,7 +93,7 @@ void run();
 #ifdef _WIN32
 #include <windows.h>
 static const int ___ALT_BENCH_COUT_SETUP = []() {
-    // SetConsoleOutputCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
     return 0;
 }();
 #endif
@@ -123,12 +130,14 @@ struct Benchmark {
     std::string name = "";
     int32_t times = 1;
     std::function<void()> fn = nullptr;
+    const char *file = "";
+    int32_t line = -1;
 };
 inline std::vector<Benchmark> g_benchmarks;
 
 
-void add(std::string const &name, int32_t times, std::function<void()> const &fn) {
-    g_benchmarks.emplace_back(name, times, fn);
+void add(std::string const &name, int32_t times, std::function<void()> const &fn, const char *file, int line) {
+    g_benchmarks.emplace_back(name, times, fn, file, line);
 }
 
 } // namespace detail
@@ -146,9 +155,9 @@ void run() {
     std::chrono::high_resolution_clock::time_point start;
     std::chrono::high_resolution_clock::time_point end;
 
-    for (auto const &[name, times, fn] : detail::g_benchmarks) {
+    for (auto const &[name, times, fn, file, line] : detail::g_benchmarks) {
 
-#if !defined(ALT_BENCH_ENABLE_STDOUT)
+#if !defined(ALT_BENCH_STDOUT_ENABLE)
         detail::stdout_off();
 #endif
 
@@ -159,14 +168,19 @@ void run() {
         }
         end = std::chrono::high_resolution_clock::now();
 
-#if !defined(ALT_BENCH_ENABLE_STDOUT)
+#if !defined(ALT_BENCH_STDOUT_ENABLE)
         detail::stdout_on();
 #endif
 
         using ns = std::chrono::nanoseconds;
         auto const elapsed = std::chrono::duration_cast<ns>(end - start).count();
 
-        std::cout << "⌚ " << name << " ( " << double(elapsed) * 1e-6 << " ms )\n";
+        std::cout << "⌚ " << name << " :: Executed " << times << " times in " //
+                  << double(elapsed) * 1e-6 << " ms  ( " << file << ":" << line << " )\n";
+#if defined(ALT_BENCH_STDOUT_ONCE)
+        fn();
+        std::cout << "\n";
+#endif
     }
 }
 
