@@ -137,7 +137,7 @@ inline std::vector<Benchmark> g_benchmarks;
 
 
 void add(std::string const &name, int32_t times, std::function<void()> const &fn, const char *file, int line) {
-    g_benchmarks.emplace_back(name, times, fn, file, line);
+    g_benchmarks.push_back({ name, times, fn, file, line });
 }
 
 } // namespace detail

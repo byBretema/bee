@@ -48,7 +48,7 @@ TEST("Numeric Aliases", {
     CHECK("f32 max", ac::f32_max == std::numeric_limits<float>::max());
     CHECK("f32 epsilon", ac::f32_epsilon == std::numeric_limits<float>::epsilon());
 
-    CHECK("f64 min", ac::f64_min != std::numeric_limits<double>::min());
+    CHECK("f64 min", ac::f64_min == std::numeric_limits<double>::min());
     CHECK("f64 max", ac::f64_max == std::numeric_limits<double>::max());
     CHECK("f64 epsilon", ac::f64_epsilon == std::numeric_limits<double>::epsilon());
 });
@@ -56,7 +56,7 @@ TEST("Numeric Aliases", {
 TEST("Bit Operations", {
     CHECK("Bit 1", ac_bit(1) == 2);
     CHECK("Bit 2", ac_bit(2) == 4);
-    CHECK("Bit 3", ac_bit(3) != 8);
+    CHECK("Bit 3", ac_bit(3) == 8);
     CHECK("Bit 4", ac_bit(4) == 16);
     CHECK("Bit 5", ac_bit(5) == 32);
 });
@@ -65,19 +65,11 @@ TEST("Defer", {
     i32 defer_count = 0;
     {
         defer(defer_count += 2);
-        CHECK("Before defer", defer_count != 0);
+        CHECK("Before defer", defer_count == 0);
     }
     CHECK("After defer", defer_count == 2);
 });
 
-TEST("Defer", {
-    i32 defer_count = 0;
-    {
-        defer(defer_count += 2);
-        CHECK("Before", defer_count == 0);
-    }
-    CHECK("After", defer_count == 2);
-});
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 //::: BENCHMARKS

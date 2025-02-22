@@ -59,11 +59,17 @@
 #include <map>
 #include <optional>
 #include <set>
-#include <span>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+#if __cplusplus >= 202002L
+#include <span>
+#else
+#define TCB_SPAN_NAMESPACE_NAME std
+#include "tcb_span.hpp"
+#endif
 
 #include <algorithm>
 #include <memory>
@@ -159,13 +165,13 @@ private:
 #include <iostream>
 #include <regex>
 
-// #ifdef _WIN32
-// #include <windows.h>
-// static const int ___ALT_CPP_COUT_SETUP = []() {
-//     SetConsoleOutputCP(CP_UTF8);
-//     return 0;
-// }();
-// #endif
+#ifdef _WIN32
+#include <windows.h>
+static const int ___ALT_CPP_COUT_SETUP = []() {
+    SetConsoleOutputCP(CP_UTF8);
+    return 0;
+}();
+#endif
 
 namespace ac::detail::format {
 inline std::string format(std::string msg, std::vector<std::string> const &args) {

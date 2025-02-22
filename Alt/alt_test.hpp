@@ -84,7 +84,7 @@ void run();
     if ((condition)) {                                                                                                 \
         result.pass_count++;                                                                                           \
     } else {                                                                                                           \
-        result.errors.emplace_back(name, __FILE__, __LINE__);                                                          \
+        result.errors.push_back({ name, __FILE__, __LINE__ });                                                         \
         result.fail_count++;                                                                                           \
     }
 
