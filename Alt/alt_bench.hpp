@@ -2,7 +2,7 @@
 
 /* alt_bench - v0.01
 
-    Micro framework for bechmarking
+    Nano framework for bechmarking
 
     No warranty implied, use at your own risk.
 
@@ -83,6 +83,14 @@ void run();
 #ifndef __ALT_BENCH_IMPLEMENTATION_GUARD
 #define __ALT_BENCH_IMPLEMENTATION_GUARD
 
+#ifdef _WIN32
+#include <windows.h>
+static const int ___ALT_BENCH_COUT_SETUP = []() {
+    // SetConsoleOutputCP(CP_UTF8);
+    return 0;
+}();
+#endif
+
 namespace ac::bench {
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -111,12 +119,12 @@ void stdout_on() {
     }
 }
 
-struct Item {
+struct Benchmark {
     std::string name = "";
     int32_t times = 1;
     std::function<void()> fn = nullptr;
 };
-inline std::vector<Item> g_benchmarks;
+inline std::vector<Benchmark> g_benchmarks;
 
 
 void add(std::string const &name, int32_t times, std::function<void()> const &fn) {
@@ -130,9 +138,10 @@ void add(std::string const &name, int32_t times, std::function<void()> const &fn
 void run() {
 
     std::cout << "\n";
-    std::cout << "===========================================================\n";
-    std::cout << "😴 RUNNING BENCHMARKs\n";
-    std::cout << "===========================================================\n";
+    std::cout << "============================================================\n";
+    std::cout << "                   😴 RUNNING BENCHMARKs\n";
+    std::cout << "============================================================\n";
+    std::cout << "\n";
 
     std::chrono::high_resolution_clock::time_point start;
     std::chrono::high_resolution_clock::time_point end;
@@ -157,7 +166,7 @@ void run() {
         using ns = std::chrono::nanoseconds;
         auto const elapsed = std::chrono::duration_cast<ns>(end - start).count();
 
-        std::cout << "⌚ " << name << " | " << double(elapsed) * 1e-6 << " ms\n";
+        std::cout << "⌚ " << name << " ( " << double(elapsed) * 1e-6 << " ms )\n";
     }
 }
 

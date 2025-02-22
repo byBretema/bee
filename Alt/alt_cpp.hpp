@@ -113,18 +113,18 @@
 #ifndef defer
 #define defer(fn) ac_defer(fn)
 #else
-#warning "[alt_cpp] 'defer' is already defined using it might end in a missbehave"
+#warning "[alt_cpp] :: 'defer' is already defined using it might end in a missbehave"
 #endif
 
 #define ac_deferc(fn) const auto AC_CONCAT(defer__, __LINE__) = ac::detail::Defer([=]() { fn; })
 #ifndef deferc
 #define deferc(fn) ac_deferc(fn)
 #else
-#warning "[alt_cpp] 'deferc' is already defined using it might end in a missbehave"
+#warning "[alt_cpp] :: 'deferc' is already defined using it might end in a missbehave"
 #endif
 
 namespace ac::detail {
-template <typename T> // <- Shout-Out to https://github.com/javiersalcedopuyo
+template <typename T> // <- Thanks @javiersalcedopuyo
 class Defer {
 public:
     Defer() = delete;
@@ -204,7 +204,7 @@ public:                                                                         
 #ifndef as
 #define as(T, x) ac_as(T, x)
 #else
-#warning "[alt_cpp] 'as' is already defined using it might end in a missbehave"
+#warning "[alt_cpp] :: 'as' is already defined using it might end in a missbehave"
 #endif
 
 
@@ -219,6 +219,7 @@ namespace ac {
 //-------------------------------------
 
 namespace TypeAlias_Numbers {
+
 // Bool
 using b8 = bool;
 
@@ -275,21 +276,23 @@ using namespace TypeAlias_Numbers;
 //-------------------------------------
 
 namespace TypeAlias_Pointers {
+
 // Unique pointer
 template <typename T>
-using uptr = std::unique_ptr<T>;
+using Uptr = std::unique_ptr<T>;
 template <typename T, typename... Args>
-constexpr uptr<T> unew(Args &&...args) {
+constexpr Uptr<T> Unew(Args &&...args) {
     return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
 // Shared pointer
 template <typename T>
-using sptr = std::shared_ptr<T>;
+using Sptr = std::shared_ptr<T>;
 template <typename T, typename... Args>
-constexpr sptr<T> snew(Args &&...args) {
+constexpr Sptr<T> Snew(Args &&...args) {
     return std::make_shared<T>(std::forward<Args>(args)...);
 }
+
 } // namespace TypeAlias_Pointers
 using namespace TypeAlias_Pointers;
 
@@ -299,32 +302,81 @@ using namespace TypeAlias_Pointers;
 //-------------------------------------
 
 namespace TypeAlias_Containers {
-// Maps
-template <typename K, typename V>
-using umap = std::unordered_map<K, V>;
-template <typename K, typename V>
-using omap = std::map<K, V>;
 
-// Sets
-template <typename T>
-using uset = std::unordered_set<T>;
-template <typename T>
-using oset = std::set<T>;
+// RO : Read Only (aka: const &)
+// RW : Read and Write (aka: &)
 
-// Arrays
+// Unordered Map
+template <typename K, typename V>
+using Umap = std::unordered_map<K, V>;
+template <typename K, typename V>
+using Umap_RO = std::unordered_map<K, V> const &;
+template <typename K, typename V>
+using Umap_RW = std::unordered_map<K, V> &;
+
+// Ordered Map
+template <typename K, typename V>
+using Omap = std::map<K, V>;
+template <typename K, typename V>
+using Omap_RO = std::map<K, V> const &;
+template <typename K, typename V>
+using Omap_RW = std::map<K, V> const &;
+
+// Unordered Set
 template <typename T>
-using vec = std::vector<T>;
+using Uset = std::unordered_set<T>;
+template <typename T>
+using Uset_RO = std::unordered_set<T> const &;
+template <typename T>
+using Uset_RW = std::unordered_set<T> &;
+
+// Ordered Set
+template <typename T>
+using Oset = std::set<T>;
+template <typename T>
+using Oset_RO = std::set<T> const &;
+template <typename T>
+using Oset_RW = std::set<T> &;
+
+// Dynamic Array
+template <typename T>
+using Vec = std::vector<T>;
+template <typename T>
+using Vec_RO = std::vector<T> const &;
+template <typename T>
+using Vec_RW = std::vector<T> &;
+
+// Array
 template <typename T, size_t S>
-using arr = std::array<T, S>;
+using Arr = std::array<T, S>;
+template <typename T, size_t S>
+using Arr_RO = std::array<T, S> const &;
+template <typename T, size_t S>
+using Arr_RW = std::array<T, S> &;
 
 // Optional
 template <typename T>
-using opt = std::optional<T>;
+using Opt = std::optional<T>;
 
-// // String
-// using str = std::string;
+// String
+using Str = std::string;
+using Str_RO = std::string const &;
+using Str_RW = std::string &;
+
+// Function
+template <typename T>
+using Fn = std::function<T>;
+template <typename T>
+using Fn_RO = std::function<T>;
+
+// Span
+template <typename T>
+using Span = std::span<T>;
+template <typename T>
+using Span_RO = std::span<const T>;
+
 } // namespace TypeAlias_Containers
-static inline constexpr auto none = std::nullopt;
+static inline constexpr auto None = std::nullopt;
 using namespace TypeAlias_Containers;
 
 
@@ -335,10 +387,10 @@ using namespace TypeAlias_Containers;
 #ifdef ALT_CPP_INCLUDE_GLM
 
 namespace TypeAlias_GLM {
-using vec2 = glm::vec2;
-using vec3 = glm::vec3;
-using vec4 = glm::vec4;
-using mat4 = glm::mat4;
+using Vec2 = glm::vec2;
+using Vec3 = glm::vec3;
+using Vec4 = glm::vec4;
+using Mat4 = glm::mat4;
 } // namespace TypeAlias_GLM
 using namespace TypeAlias_GLM;
 #else
@@ -378,7 +430,7 @@ public:
     f64 elapsed_ms() const;
     f64 elapsed_us() const;
     f64 elapsed_ns() const;
-    bool is_valid() const;
+    b8 is_valid() const;
 
 private:
     i64 elapsed() const;
@@ -386,7 +438,7 @@ private:
 private:
     using Clock = std::chrono::high_resolution_clock;
     Clock::time_point m_ref = Clock::now();
-    bool m_valid = false;
+    b8 m_valid = false;
 };
 using ETimer = ElapsedTimer;
 
@@ -395,32 +447,31 @@ using ETimer = ElapsedTimer;
 // ... String Utils
 //-------------------------------------
 
-std::string str_replace(std::string to_replace, std::string const &from, std::string const &to,
-                        bool onlyFirstMatch = false);
-vec<std::string> str_split(std::string const &to_split, std::string const &delimeter);
+Str str_replace(Str to_replace, Str_RO from, Str_RO to, b8 onlyFirstMatch = false);
+Vec<Str> str_split(Str_RO to_split, Str_RO delimeter);
 
 
 //-------------------------------------
 // ... Binary Utils
 //-------------------------------------
 
-vec<u8> bin_read(std::string const &path);
-bool bin_check_magic(std::span<const u8> bin, std::span<const u8> magic);
+Vec<u8> bin_read(Str_RO path);
+b8 bin_check_magic(Span_RO<u8> bin, Span_RO<u8> magic);
 
 
 //-------------------------------------
 // ... Files Utils
 //-------------------------------------
 
-std::string file_read(std::string const &input_file);
+Str file_read(Str_RO input_file);
 
-bool file_write_append(std::string const &output_file, std::string const &to_write);
-bool file_write_trunc(std::string const &output_file, std::string const &to_write);
+b8 file_write_append(Str_RO output_file, Str_RO to_write);
+b8 file_write_trunc(Str_RO output_file, Str_RO to_write);
 
-bool file_write_append(std::string const &output_file, const char *data, usize data_size);
-bool file_write_trunc(std::string const &output_file, const char *data, usize data_size);
+b8 file_write_append(Str_RO output_file, const char *data, usize data_size);
+b8 file_write_trunc(Str_RO output_file, const char *data, usize data_size);
 
-bool file_check_extension(std::string const &input_file, std::string ext);
+b8 file_check_extension(Str_RO input_file, Str ext);
 
 
 //-------------------------------------
@@ -430,17 +481,17 @@ bool file_check_extension(std::string const &input_file, std::string ext);
 f32 map(f32 value, f32 srcMin, f32 srcMax, f32 dstMin, f32 dstMax);
 f32 map_100(f32 value, f32 dstMin, f32 dstMax);
 
-bool fuzzyEq(f32 f1, f32 f2, f32 threshold = 0.01f);
+b8 fuzzyEq(f32 f1, f32 f2, f32 threshold = 0.01f);
 
 f32 clampAngle(f32 angle);
 
 #ifdef ALT_CPP_INCLUDE_GLM
-bool fuzzyEq(vec2 const &v1, vec2 const &v2, f32 t = 0.01f);
-bool fuzzyEq(vec3 const &v1, vec3 const &v2, f32 t = 0.01f);
-bool fuzzyEq(vec4 const &v1, vec4 const &v2, f32 t = 0.01f);
+b8 fuzzyEq(Vec2 const &v1, Vec2 const &v2, f32 t = 0.01f);
+b8 fuzzyEq(Vec3 const &v1, Vec3 const &v2, f32 t = 0.01f);
+b8 fuzzyEq(Vec4 const &v1, Vec4 const &v2, f32 t = 0.01f);
 
 template <typename T>
-inline bool isAligned(T const &a, T const &b, f32 margin = 0.f) {
+inline b8 isAligned(T const &a, T const &b, f32 margin = 0.f) {
     return abs(glm::dot(glm::normalize(a), glm::normalize(b))) >= (1.f - f32_epsilon - margin);
 }
 #endif
@@ -494,7 +545,7 @@ f64 ElapsedTimer::elapsed_s() const { return as(f64, elapsed()) * ns_to_s; }
 f64 ElapsedTimer::elapsed_ms() const { return as(f64, elapsed()) * ns_to_ms; }
 f64 ElapsedTimer::elapsed_us() const { return as(f64, elapsed()) * ns_to_us; }
 f64 ElapsedTimer::elapsed_ns() const { return as(f64, elapsed()); }
-bool ElapsedTimer::is_valid() const { return m_valid; }
+b8 ElapsedTimer::is_valid() const { return m_valid; }
 i64 ElapsedTimer::elapsed() const {
     auto const now = Clock::now();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(now - m_ref).count();
@@ -505,7 +556,7 @@ i64 ElapsedTimer::elapsed() const {
 // ... String Utils
 //-------------------------------------
 
-std::string str_replace(std::string to_replace, std::string const &from, std::string const &to, bool only_first_match) {
+Str str_replace(Str to_replace, Str_RO from, Str_RO to, b8 only_first_match) {
     usize pos = 0;
     while ((pos = to_replace.find(from)) < to_replace.size()) {
         to_replace.replace(pos, from.length(), to);
@@ -516,9 +567,9 @@ std::string str_replace(std::string to_replace, std::string const &from, std::st
     return to_replace;
 }
 
-vec<std::string> str_split(std::string const &to_split, std::string const &delimeter) {
-    std::string token;
-    vec<std::string> splitted;
+Vec<Str> str_split(Str_RO to_split, Str_RO delimeter) {
+    Str token;
+    Vec<Str> splitted;
     usize ini = 0;
     usize end = 0;
 
@@ -543,21 +594,21 @@ vec<std::string> str_split(std::string const &to_split, std::string const &delim
 // ... Binary Utils
 //-------------------------------------
 
-vec<u8> bin_read(std::string const &path) {
+Vec<u8> bin_read(Str_RO path) {
     std::ifstream file { path, std::ios::binary };
     auto fileBegin = std::istreambuf_iterator<char>(file);
     auto fileEnd = std::istreambuf_iterator<char>();
     return { fileBegin, fileEnd };
 }
 
-bool bin_check_magic(std::span<const u8> bin, std::span<const u8> magic) {
+b8 bin_check_magic(Span_RO<u8> bin, Span_RO<u8> magic) {
     // Validation
     if (magic.empty() || bin.size() < magic.size()) {
         return false;
     }
     // Iteration
-    bool match = true;
-    for (size_t i = 0; i < magic.size(); ++i) {
+    b8 match = true;
+    for (usize i = 0; i < magic.size(); ++i) {
         match &= (bin[i] == magic[i]);
     }
     // Result
@@ -569,7 +620,7 @@ bool bin_check_magic(std::span<const u8> bin, std::span<const u8> magic) {
 // ...Files Utils
 //-------------------------------------
 
-std::string file_read(std::string const &input_file) {
+Str file_read(Str_RO input_file) {
     std::ifstream file(input_file, std::ios::ate | std::ios::binary);
     ac_defer(file.close());
 
@@ -578,7 +629,7 @@ std::string file_read(std::string const &input_file) {
         ac_err("Issues opening file [r]: {}", input_file);
     }
 
-    std::string content;
+    Str content;
     content.resize(file.tellg());
     file.seekg(0, std::ios::beg);
     file.read(&content[0], content.size());
@@ -586,7 +637,7 @@ std::string file_read(std::string const &input_file) {
     return content;
 }
 
-bool file_write(std::string const &output_file, char const *data, usize data_size, std::ios_base::openmode mode) {
+b8 file_write(Str_RO output_file, char const *data, usize data_size, std::ios_base::openmode mode) {
     if (!data || data_size < 1) {
         return false;
         ac_err("[file_write] Invalid data: {}", output_file);
@@ -604,25 +655,23 @@ bool file_write(std::string const &output_file, char const *data, usize data_siz
 
     return true;
 }
-bool file_write_append(std::string const &output_file, std::string const &to_write) {
+b8 file_write_append(Str_RO output_file, Str_RO to_write) {
     return file_write(output_file, to_write.data(), to_write.size(), std::ios::app);
 }
-bool file_write_trunc(std::string const &output_file, std::string const &to_write) {
+b8 file_write_trunc(Str_RO output_file, Str_RO to_write) {
     return file_write(output_file, to_write.data(), to_write.size(), std::ios::trunc);
 }
-bool file_write_append(std::string const &output_file, const char *data, usize data_size) {
+b8 file_write_append(Str_RO output_file, const char *data, usize data_size) {
     return file_write(output_file, data, data_size, std::ios::app);
 }
-bool file_write_trunc(std::string const &output_file, const char *data, usize data_size) {
+b8 file_write_trunc(Str_RO output_file, const char *data, usize data_size) {
     return file_write(output_file, data, data_size, std::ios::trunc);
 }
 
-bool file_check_extension(std::string const &input_file, std::string ext) {
+b8 file_check_extension(Str_RO input_file, Str ext) {
     auto to_check = input_file.substr(input_file.find_last_of('.') + 1);
     std::transform(to_check.begin(), to_check.end(), to_check.begin(), ::tolower);
-
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-
     return to_check == ext;
 }
 
@@ -635,7 +684,7 @@ f32 map(f32 value, f32 srcMin, f32 srcMax, f32 dstMin, f32 dstMax) {
     return dstMin + (dstMax - dstMin) * (value - srcMin) / (srcMax - srcMin);
 }
 f32 map_100(f32 value, f32 dstMin, f32 dstMax) { return map(value, 0, 100, dstMin, dstMax); }
-bool fuzzyEq(f32 f1, f32 f2, f32 threshold) {
+b8 fuzzyEq(f32 f1, f32 f2, f32 threshold) {
     auto const diff = abs(f1 - f2);
     auto const isEq = diff <= threshold;
     return isEq;
@@ -646,11 +695,11 @@ f32 clampAngle(f32 angle) {
 }
 
 #ifdef ALT_CPP_INCLUDE_GLM
-bool fuzzyEq(vec2 const &v1, vec2 const &v2, f32 t) { return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t); }
-bool fuzzyEq(vec3 const &v1, vec3 const &v2, f32 t) {
+b8 fuzzyEq(Vec2 const &v1, Vec2 const &v2, f32 t) { return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t); }
+b8 fuzzyEq(Vec3 const &v1, Vec3 const &v2, f32 t) {
     return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t) && fuzzyEq(v1.z, v2.z, t);
 }
-bool fuzzyEq(vec4 const &v1, vec4 const &v2, f32 t) {
+b8 fuzzyEq(Vec4 const &v1, Vec4 const &v2, f32 t) {
     return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t) && fuzzyEq(v1.z, v2.z, t) && fuzzyEq(v1.w, v2.w, t);
 }
 #endif

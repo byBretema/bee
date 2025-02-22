@@ -59,6 +59,15 @@ TEST("Bit Operations", {
     CHECK("Bit 5", ac_bit(5) == 32);
 });
 
+TEST("Defer", {
+    i32 defer_count = 0;
+    {
+        defer(defer_count += 2);
+        CHECK("Before defer", defer_count == 0);
+    }
+    CHECK("After defer", defer_count == 2);
+});
+
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 //::: BENCHMARKS
@@ -85,5 +94,7 @@ BENCH("ac_info_glm_vec3", 5, ac_info("glm vec3 {}", glmstr(vec3(2.f))));
 
 int main() {
     ac::test::run();
+    std::cout << "\n";
     ac::bench::run();
+    std::cout << "\n";
 }
