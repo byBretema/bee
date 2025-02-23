@@ -67,26 +67,27 @@ void run();
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
-#define TEST(name, code)                                                                                               \
+#define TEST(name, ...)                                                                                                \
     static inline int __AC_TEST_CONCAT(test_case__, __LINE__) = [] {                                                   \
         ac::test::detail::Test test { name };                                                                          \
         test.fn = []() {                                                                                               \
             ac::test::detail::Result result;                                                                           \
-            code;                                                                                                      \
+            __VA_ARGS__;                                                                                               \
             return result;                                                                                             \
         };                                                                                                             \
         ac::test::detail::add(test);                                                                                   \
         return 0;                                                                                                      \
     }();
 
-#define CHECK(name, condition)                                                                                         \
+#define CHECK(name, ...)                                                                                               \
     result.total_count++;                                                                                              \
-    if ((condition)) {                                                                                                 \
+    if ((__VA_ARGS__)) {                                                                                               \
         result.pass_count++;                                                                                           \
     } else {                                                                                                           \
         result.errors.push_back({ name, __FILE__, __LINE__ });                                                         \
         result.fail_count++;                                                                                           \
     }
+
 
 #define TEST_CHECK(name, code) TEST(name, CHECK(name, code));
 

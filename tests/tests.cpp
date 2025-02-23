@@ -12,14 +12,59 @@
 // #define ALT_CPP_INCLUDE_GLM
 #include "../Alt/alt_cpp.hpp"
 
-using namespace ac::TypeAlias_Numbers;
 using namespace ac::TypeAlias_GLM;
+using namespace ac::TypeAlias_Numbers;
+using namespace ac::TypeAlias_Pointers;
+using namespace ac::TypeAlias_Containers;
 
 #include <iostream>
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 //::: TESTS
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+TEST("Defer Ref", {
+    i32 defer_count = 0;
+    {
+        defer(defer_count += 2);
+        CHECK("Before defer", defer_count == 0);
+    }
+    CHECK("After defer", defer_count == 2);
+});
+TEST("Defer Copy", {
+    static i32 static_defer_count = 0;
+    i32 defer_count = 3;
+    {
+        deferc(static_defer_count += defer_count);
+        CHECK("Before defer", static_defer_count == 0);
+    }
+    CHECK("After defer", static_defer_count == 3);
+});
+
+#if defined(ALT_CPP_INCLUDE_FMT) || defined(ALT_CPP_USE_FAKE_FMT)
+TEST_CHECK("String Format (Str)", ac_fmt("Test {}", "String") == "Test String");
+TEST_CHECK("String Format (Int)", ac_fmt("Test {}", 42) == "Test 42");
+TEST_CHECK("String Format (Float)", ac_fmt("Test {}", 3.14159f) == "Test 3.14159");
+TEST_CHECK("String Format (Double)", ac_fmt("Test {}", 3.14159) == "Test 3.14159");
+#endif
+
+TEST("Bit Operations", {
+    CHECK("Bit 1", ac_bit(1) == 2);
+    CHECK("Bit 2", ac_bit(2) == 4);
+    CHECK("Bit 3", ac_bit(3) == 8);
+    CHECK("Bit 4", ac_bit(4) == 16);
+    CHECK("Bit 5", ac_bit(5) == 32);
+});
+
+TEST("Cast Macro", {
+    CHECK("As i8 (clamp)", as(i8, 3.14159) == 3);
+    CHECK("As i8 (size)", sizeof(as(i8, 3.14159)) == sizeof(i8));
+    CHECK("As f32", sizeof(as(f32, 3.14159)) == sizeof(f32));
+
+    i32 *heap_i = new i32(5);
+    CHECK("As void*", typeid(as(void *, heap_i)) == typeid(void *));
+    delete heap_i;
+});
 
 TEST("Numeric Aliases", {
     CHECK("u8 min", ac::u8_min == std::numeric_limits<uint8_t>::min());
@@ -53,21 +98,40 @@ TEST("Numeric Aliases", {
     CHECK("f64 epsilon", ac::f64_epsilon == std::numeric_limits<double>::epsilon());
 });
 
-TEST("Bit Operations", {
-    CHECK("Bit 1", ac_bit(1) == 2);
-    CHECK("Bit 2", ac_bit(2) == 4);
-    CHECK("Bit 3", ac_bit(3) == 8);
-    CHECK("Bit 4", ac_bit(4) == 16);
-    CHECK("Bit 5", ac_bit(5) == 32);
+TEST("TypeAlias Pointers", {
+    struct A {
+        i32 i = 0;
+        f32 f = 0.f;
+    };
+    auto const a = A { 42, 3.14159f };
+    Uptr<A> ua = Unew<A>(42, 3.14159f);
+    CHECK("Uptr", a.i == ua->i && a.f == ua->f);
+    Sptr<A> sa = Snew<A>(42, 3.14159f);
+    CHECK("Sptr", a.i == sa->i && a.f == sa->f);
 });
 
-TEST("Defer", {
-    i32 defer_count = 0;
-    {
-        defer(defer_count += 2);
-        CHECK("Before defer", defer_count == 0);
-    }
-    CHECK("After defer", defer_count == 2);
+TEST("Optional Reference", {
+    struct A {
+        i32 i = 0;
+    };
+    auto a = A { 42 };
+
+    auto const fn_value = [](A &received_a) -> OptRef<A> { return received_a; };
+    auto opt = fn_value(a);
+    CHECK("Has Value", opt.has_value());
+    CHECK("Check Value", opt.value().get().i == 42);
+    auto const fn_null = [](A &received_a) -> OptRef<A> { return {}; };
+    CHECK("Not Has Value", !fn_null(a).has_value());
+});
+
+TEST("Elapsed Timer", {
+    using namespace std::chrono_literals;
+    ac::ETimer timer {};
+    CHECK("Init Invalid 1", !timer.is_valid());
+    CHECK("Init Invalid 2", timer.elapsed_ns() * timer.is_valid() == 0);
+    timer.reset();
+    std::this_thread::sleep_for(10ms);
+    CHECK("After Reset", timer.elapsed_ms() * timer.is_valid() > 9);
 });
 
 
@@ -75,7 +139,7 @@ TEST("Defer", {
 //::: BENCHMARKS
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-inline int32_t BENCH_COUNT = 5000;
+inline int32_t BENCH_COUNT = 5;
 
 BENCH("StdCout", BENCH_COUNT, {
     std::cout << std::boolalpha << "[INFO] | " << __FILE__ << ":" << __LINE__ //

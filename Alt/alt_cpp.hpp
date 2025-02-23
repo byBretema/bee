@@ -64,16 +64,18 @@
 #include <unordered_set>
 #include <vector>
 
+#include <thread>
+
+#include <algorithm>
+#include <functional>
+#include <memory>
+
 #if __cplusplus >= 202002L
 #include <span>
 #else
 #define TCB_SPAN_NAMESPACE_NAME std
 #include "tcb_span.hpp"
 #endif
-
-#include <algorithm>
-#include <memory>
-// #include <functional>
 
 #ifdef ALT_CPP_INCLUDE_FMT
 #include <fmt/chrono.h>
@@ -246,8 +248,10 @@ public:                                                                         
 #define ac_nocopy_nomove(T) ac_nocopy(T) ac_nomove(T)
 
 #define ac_as(T, x) static_cast<T>(x)
+#define ac_as_force(T, x) ((T)(x))
 #ifndef as
 #define as(T, x) ac_as(T, x)
+#define as_force(T, x) ac_as_force(T, x)
 #else
 #warning "[alt_cpp] :: 'as' is already defined using it might end in a missbehave"
 #endif
@@ -402,6 +406,8 @@ using Arr_RW = std::array<T, S> &;
 // Optional
 template <typename T>
 using Opt = std::optional<T>;
+template <typename T>
+using OptRef = std::optional<std::reference_wrapper<T>>;
 
 // String
 using Str = std::string;
@@ -421,7 +427,6 @@ template <typename T>
 using Span_RO = std::span<const T>;
 
 } // namespace TypeAlias_Containers
-static inline constexpr auto None = std::nullopt;
 using namespace TypeAlias_Containers;
 
 
