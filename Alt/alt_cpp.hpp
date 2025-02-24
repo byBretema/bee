@@ -70,6 +70,10 @@
 #include <functional>
 #include <memory>
 
+#include <filesystem>
+
+#include <iso646.h>
+
 #if __cplusplus >= 202002L
 #include <span>
 #else
@@ -256,6 +260,20 @@ public:                                                                         
 #warning "[alt_cpp] :: 'as' is already defined using it might end in a missbehave"
 #endif
 
+// #define ac_let auto const
+// #ifndef let
+// #define let ac_let
+// #else
+// #warning "[alt_cpp] :: 'let' is already defined using it might end in a missbehave"
+// #endif
+
+// #define ac_var auto
+// #ifndef var
+// #define var ac_var
+// #else
+// #warning "[alt_cpp] :: 'var' is already defined using it might end in a missbehave"
+// #endif
+
 
 //=========================================================
 //== NAMESPACE
@@ -330,7 +348,7 @@ namespace TypeAlias_Pointers {
 template <typename T>
 using Uptr = std::unique_ptr<T>;
 template <typename T, typename... Args>
-constexpr Uptr<T> Unew(Args &&...args) {
+[[nodiscard]] constexpr Uptr<T> Unew(Args &&...args) {
     return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
@@ -338,7 +356,7 @@ constexpr Uptr<T> Unew(Args &&...args) {
 template <typename T>
 using Sptr = std::shared_ptr<T>;
 template <typename T, typename... Args>
-constexpr Sptr<T> Snew(Args &&...args) {
+[[nodiscard]] constexpr Sptr<T> Snew(Args &&...args) {
     return std::make_shared<T>(std::forward<Args>(args)...);
 }
 
@@ -476,14 +494,14 @@ inline constexpr f64 ns_to_us = 1e-3;
 class ElapsedTimer {
 public:
     void reset();
-    f64 elapsed_s() const;
-    f64 elapsed_ms() const;
-    f64 elapsed_us() const;
-    f64 elapsed_ns() const;
-    b8 is_valid() const;
+    [[nodiscard]] f64 elapsed_s() const;
+    [[nodiscard]] f64 elapsed_ms() const;
+    [[nodiscard]] f64 elapsed_us() const;
+    [[nodiscard]] f64 elapsed_ns() const;
+    [[nodiscard]] b8 is_valid() const;
 
 private:
-    i64 elapsed() const;
+    [[nodiscard]] i64 elapsed() const;
 
 private:
     using Clock = std::chrono::high_resolution_clock;
@@ -497,23 +515,34 @@ using ETimer = ElapsedTimer;
 // ... String Utils
 //-------------------------------------
 
-Str str_replace(Str to_replace, Str_RO from, Str_RO to, b8 onlyFirstMatch = false);
-Vec<Str> str_split(Str_RO to_split, Str_RO delimeter);
+[[nodiscard]] Str str_lower(Str str);
+[[nodiscard]] Str str_upper(Str str);
+[[nodiscard]] Str str_capital(Str str);
+
+[[nodiscard]] b8 str_contains(Str_RO str, Str_RO substr);
+[[nodiscard]] Vec<Str> str_split(Str_RO str, Str_RO delimeter);
+[[nodiscard]] Str str_replace(Str str, Str_RO from, Str_RO to, b8 onlyFirstMatch = false);
+[[nodiscard]] Str str_replace_many(Str str, Vec_RO<Str> from, Vec_RO<Str> to, b8 sorted = false);
+
+[[nodiscard]] Str str_chop(Str_RO str, i32 count);
+[[nodiscard]] Str str_trim(Str str, Str_RO to_trim = " ");
+[[nodiscard]] Str str_trim_l(Str str, Str_RO to_trim = " ");
+[[nodiscard]] Str str_trim_r(Str str, Str_RO to_trim = " ");
 
 
 //-------------------------------------
 // ... Binary Utils
 //-------------------------------------
 
-Vec<u8> bin_read(Str_RO path);
-b8 bin_check_magic(Span_RO<u8> bin, Span_RO<u8> magic);
+[[nodiscard]] Vec<u8> bin_read(Str_RO path);
+[[nodiscard]] b8 bin_check_magic(Span_RO<u8> bin, Span_RO<u8> magic);
 
 
 //-------------------------------------
 // ... Files Utils
 //-------------------------------------
 
-Str file_read(Str_RO input_file);
+[[nodiscard]] Str file_read(Str_RO input_file);
 
 b8 file_write_append(Str_RO output_file, Str_RO to_write);
 b8 file_write_trunc(Str_RO output_file, Str_RO to_write);
@@ -528,20 +557,20 @@ b8 file_check_extension(Str_RO input_file, Str ext);
 // ... Math Utils
 //-------------------------------------
 
-f32 map(f32 value, f32 srcMin, f32 srcMax, f32 dstMin, f32 dstMax);
-f32 map_100(f32 value, f32 dstMin, f32 dstMax);
+[[nodiscard]] f32 map(f32 value, f32 srcMin, f32 srcMax, f32 dstMin, f32 dstMax);
+[[nodiscard]] f32 map_100(f32 value, f32 dstMin, f32 dstMax);
 
-b8 fuzzyEq(f32 f1, f32 f2, f32 threshold = 0.01f);
+[[nodiscard]] b8 fuzzyEq(f32 f1, f32 f2, f32 threshold = 0.01f);
 
-f32 clampAngle(f32 angle);
+[[nodiscard]] f32 clampAngle(f32 angle);
 
 #ifdef ALT_CPP_INCLUDE_GLM
-b8 fuzzyEq(Vec2 const &v1, Vec2 const &v2, f32 t = 0.01f);
-b8 fuzzyEq(Vec3 const &v1, Vec3 const &v2, f32 t = 0.01f);
-b8 fuzzyEq(Vec4 const &v1, Vec4 const &v2, f32 t = 0.01f);
+[[nodiscard]] b8 fuzzyEq(Vec2 const &v1, Vec2 const &v2, f32 t = 0.01f);
+[[nodiscard]] b8 fuzzyEq(Vec3 const &v1, Vec3 const &v2, f32 t = 0.01f);
+[[nodiscard]] b8 fuzzyEq(Vec4 const &v1, Vec4 const &v2, f32 t = 0.01f);
 
 template <typename T>
-inline b8 isAligned(T const &a, T const &b, f32 margin = 0.f) {
+[[nodiscard]] inline b8 isAligned(T const &a, T const &b, f32 margin = 0.f) {
     return abs(glm::dot(glm::normalize(a), glm::normalize(b))) >= (1.f - f32_epsilon - margin);
 }
 #endif
@@ -563,6 +592,7 @@ inline b8 isAligned(T const &a, T const &b, f32 margin = 0.f) {
 #include <fstream>
 
 namespace ac {
+namespace fs = std::filesystem;
 
 //-------------------------------------
 // ... Elapsed Timer
@@ -587,37 +617,99 @@ i64 ElapsedTimer::elapsed() const {
 // ... String Utils
 //-------------------------------------
 
-Str str_replace(Str to_replace, Str_RO from, Str_RO to, b8 only_first_match) {
-    usize pos = 0;
-    while ((pos = to_replace.find(from)) < to_replace.size()) {
-        to_replace.replace(pos, from.length(), to);
-        if (only_first_match) {
-            break;
-        }
-    }
-    return to_replace;
+Str str_lower(Str str) {
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+    return str;
+}
+Str str_upper(Str str) {
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+    return str;
+}
+Str str_capital(Str str) {
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+    std::transform(str.begin(), str.begin() + 1, str.begin(), ::toupper);
+    return str;
 }
 
-Vec<Str> str_split(Str_RO to_split, Str_RO delimeter) {
+b8 str_contains(Str_RO str, Str_RO substr) { return str.find(substr) < str.size(); }
+
+Vec<Str> str_split(Str_RO str, Str_RO delimeter) {
     Str token;
     Vec<Str> splitted;
     usize ini = 0;
     usize end = 0;
-
     // Split and store the string body
-    while ((end = to_split.find(delimeter, ini)) < to_split.size()) {
-        token = to_split.substr(ini, end - ini);
+    while ((end = str.find(delimeter, ini)) < str.size()) {
+        token = str.substr(ini, end - ini);
         ini = end + delimeter.size();
         splitted.push_back(token);
     }
-
     // Store the string tail
-    if (ini < to_split.size()) {
-        token = to_split.substr(ini);
+    if (ini < str.size()) {
+        token = str.substr(ini);
         splitted.push_back(token);
     }
-
     return splitted;
+}
+
+Str str_replace(Str str, Str_RO from, Str_RO to, b8 only_first_match) {
+    usize pos = 0;
+    while ((pos = str.find(from)) < str.size()) {
+        str.replace(pos, from.length(), to);
+        if (only_first_match) {
+            break;
+        }
+    }
+    return str;
+}
+
+Str str_replace_many(Str str, Vec_RO<Str> from, Vec_RO<Str> to, b8 sorted) {
+    b8 const same_size = from.size() == to.size();
+    b8 const is_empty = same_size && from.size() < 1;
+    if (!same_size || is_empty) {
+        if (!same_size) {
+            assert(0);
+        }
+        return str;
+    }
+
+    usize pos = 0;
+    usize i = 0;
+
+    usize anchor = 0;
+    while (i < from.size() && (pos = str.find(from[i], anchor)) < str.size()) {
+        str.replace(pos, from[i].length(), to[i]);
+        if (sorted) {
+            anchor = pos;
+        }
+        ++i;
+    }
+    return str;
+}
+
+Str str_chop(Str_RO str, i32 count) {
+    if (count >= str.size()) {
+        ac_warn("{}", "'chop' count is bigger than passed string, empty string returned");
+        return "";
+    }
+    return str.substr(0, str.size() - count);
+}
+
+Str str_trim(Str str, Str_RO to_trim) {
+    auto const l = str_trim_l(str, to_trim);
+    return str_trim_r(l, to_trim);
+}
+Str str_trim_l(Str str, Str_RO to_trim) {
+    if (str.starts_with(to_trim)) {
+        str.replace(str.find_first_of(to_trim), to_trim.length(), "");
+    }
+    return str;
+}
+Str str_trim_r(Str str, Str_RO to_trim) {
+    if (str.ends_with(to_trim)) {
+        str.replace(str.find_last_of(to_trim), to_trim.length(), "");
+    }
+    return str;
 }
 
 

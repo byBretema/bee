@@ -3,12 +3,12 @@
 #include "../Alt/alt_test.hpp"
 
 #define ALT_BENCH_IMPLEMENTATION
-#define ALT_BENCH_STDOUT_ONCE
+// #define ALT_BENCH_STDOUT_ONCE
 #include "../Alt/alt_bench.hpp"
 
 #define ALT_CPP_IMPLEMENTATION
 #define ALT_CPP_USE_FAKE_FMT
-// #define ALT_CPP_INCLUDE_FMT
+#define ALT_CPP_INCLUDE_FMT
 // #define ALT_CPP_INCLUDE_GLM
 #include "../Alt/alt_cpp.hpp"
 
@@ -134,6 +134,63 @@ TEST("Elapsed Timer", {
     CHECK("After Reset", timer.elapsed_ms() * timer.is_valid() > 9);
 });
 
+TEST("String Helpers", {
+    Str const to_case = "test STRING to PERFORM the tests";
+    CHECK("To Lower", ac::str_lower(to_case) == "test string to perform the tests");
+    CHECK("To Upper", ac::str_upper(to_case) == "TEST STRING TO PERFORM THE TESTS");
+    CHECK("To Capital", ac::str_capital(to_case) == "Test string to perform the tests");
+
+    Str const to_replace = "1,2,3,4,5";
+    CHECK("Replace All", ac::str_replace(to_replace, ",", " / ") == "1 / 2 / 3 / 4 / 5");
+    CHECK("Replace First", ac::str_replace(to_replace, ",", " / ", true) == "1 / 2,3,4,5");
+
+    Str const to_replace_many = "1.2-3:4·5";
+    Str const to_replace_many_ok = "1[1] 2[2] 3[2] 4[4] 5";
+    Vec<Str> from = { "-", ".", "·", ":" };
+    Vec<Str> to = { "[2] ", "[1] ", "[4] ", "[3] " };
+    CHECK("Replace Many Bad", ac::str_replace_many(to_replace_many, from, to) != to_replace_many_ok);
+    from = { ".", "-", ":", "·" };
+    to = { "[1] ", "[2] ", "[3] ", "[4] " };
+    CHECK("Replace Many Good", ac::str_replace_many(to_replace_many, from, to, true) != to_replace_many_ok);
+
+    Str const to_split = "1,2,3,4,5";
+    Vec<Str> const to_split_ok = { "1", "2", "3", "4", "5" };
+    CHECK("Split", ac::str_split(to_split, ",") == to_split_ok);
+
+    CHECK("Chop", ac::str_chop("a / b / c / ", 3) == "a / b / c");
+    CHECK("Contains", ac::str_contains("a / b / c / ", " b "));
+
+    CHECK("Trim", ac::str_trim(" aaa ") == "aaa");
+    CHECK("Trim L", ac::str_trim_l(" aaa ") == "aaa ");
+    CHECK("Trim R", ac::str_trim_r(" aaa ") == " aaa");
+    CHECK("Trim Not Sapce", ac::str_trim_r("**aaa**", "**") == "aaa");
+});
+
+TEST("File/Bin Helpers", {
+    Str const file_content = ac::file_read("./to_file_read.txt");
+    Str const expected_content = "Test\nfile\nfor\nAlt\nCpp\n";
+    CHECK("Read", file_content == expected_content);
+
+    auto const t = std::time(nullptr);
+    auto const tm = *std::localtime(&t);
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
+    Str const str = oss.str();
+    CHECK("Append", ac::file_write_append("./to_file_append.txt", str + "\n"));
+    Str const append_content = ac::file_read("./to_file_append.txt");
+    Vec<Str> const append_split = ac::str_split(append_content, "\n");
+    CHECK("Append Validation", append_split[append_split.size() - 1] == str);
+
+    Vec<u8> const bin { 'T', 'e', 's', 't', '\n', 'D', 'a', 't', 'a' };
+    CHECK("Write", ac::file_write_trunc("./to_file_write.bin", as_force(char const *, bin.data()), bin.size()));
+    CHECK("Write Validation", ac::fs::exists("./to_file_write.bin"));
+
+    auto const bin_content = ac::bin_read("./to_file_write.bin");
+    Vec<u8> const magic { 'T', 'e', 's', 't' };
+    CHECK("Magic", ac::bin_check_magic(bin_content, magic));
+
+    CHECK("Extension", ac::file_check_extension("./to_file_write.bin", "BiN"));
+});
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 //::: BENCHMARKS
@@ -155,6 +212,14 @@ BENCH("AC Info (fmtlib)", BENCH_COUNT, ac_info("2 elevated to {} is {} == {}", 1
 BENCH("AC Info (apped)", BENCH_COUNT, ac_info("2 elevated to {} is {} == {}", 1, ac_bit(1), true));
 #endif
 
+BENCH("Str Replace Many Unsorted", BENCH_COUNT,
+      Str s = ac::str_replace_many("1.2-3:4·5", Vec<Str> { "-", ".", "·", ":" },
+                                   Vec<Str> { "[2] ", "[1] ", "[4] ", "[3] " }));
+BENCH("Str Replace Many Sorted", BENCH_COUNT,
+      Str s = ac::str_replace_many("1.2-3:4·5", Vec<Str> { ".", "-", ":", "·" },
+                                   Vec<Str> { "[1] ", "[2] ", "[3] ", "[4] " }));
+
+
 #ifdef ALT_CPP_INCLUDE_GLM
 BENCH("ac_info_glm_vec3", 5, ac_info("glm vec3 {}", glmstr(Vec3(2.f))));
 #endif
@@ -166,6 +231,6 @@ BENCH("ac_info_glm_vec3", 5, ac_info("glm vec3 {}", glmstr(Vec3(2.f))));
 
 int main() {
     ac::test::run();
-    ac_print("");
+    ac_print("{}", "");
     ac::bench::run();
 }

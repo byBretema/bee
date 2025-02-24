@@ -70,9 +70,9 @@ void run();
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-#define BENCH(name, times, code)                                                                                       \
+#define BENCH(name, times, ...)                                                                                        \
     static inline int __AC_BENCH_CONCAT(bench_case__, __LINE__) = [] {                                                 \
-        ac::bench::detail::add(name, times, [] { code; }, __FILE__, __LINE__);                                         \
+        ac::bench::detail::add(name, times, [] { __VA_ARGS__; }, __FILE__, __LINE__);                                  \
         return 0;                                                                                                      \
     }();
 
