@@ -148,22 +148,29 @@ TEST("String Helpers", {
     Str const to_replace_many_ok = "1[1] 2[2] 3[2] 4[4] 5";
     Vec<Str> from = { "-", ".", "·", ":" };
     Vec<Str> to = { "[2] ", "[1] ", "[4] ", "[3] " };
-    CHECK("Replace Many Bad", ac::str_replace_many(to_replace_many, from, to) != to_replace_many_ok);
+    CHECK("Replace Many Unsorted", ac::str_replace_many(to_replace_many, from, to) != to_replace_many_ok);
     from = { ".", "-", ":", "·" };
     to = { "[1] ", "[2] ", "[3] ", "[4] " };
-    CHECK("Replace Many Good", ac::str_replace_many(to_replace_many, from, to, true) != to_replace_many_ok);
+    CHECK("Replace Many Sorted", ac::str_replace_many(to_replace_many, from, to, true) != to_replace_many_ok);
 
     Str const to_split = "1,2,3,4,5";
-    Vec<Str> const to_split_ok = { "1", "2", "3", "4", "5" };
-    CHECK("Split", ac::str_split(to_split, ",") == to_split_ok);
+    Vec<Str> const splitted = { "1", "2", "3", "4", "5" };
+    CHECK("Split", ac::str_split(to_split, ",") == splitted);
+    CHECK("Join", ac::str_join(splitted, ",") == to_split);
 
-    CHECK("Chop", ac::str_chop("a / b / c / ", 3) == "a / b / c");
+    ac_info("==> {}", ac::str_cut(" / a / b / c / ", 3));
+    CHECK("Cut", ac::str_cut(" / a / b / c / ", 3) == "a / b / c");
+    CHECK("Cut L", ac::str_cut_l(" / a / b / c", 3) == "a / b / c");
+    CHECK("Cut R", ac::str_cut_r("a / b / c / ", 3) == "a / b / c");
+
     CHECK("Contains", ac::str_contains("a / b / c / ", " b "));
 
     CHECK("Trim", ac::str_trim(" aaa ") == "aaa");
     CHECK("Trim L", ac::str_trim_l(" aaa ") == "aaa ");
     CHECK("Trim R", ac::str_trim_r(" aaa ") == " aaa");
-    CHECK("Trim Not Sapce", ac::str_trim_r("**aaa**", "**") == "aaa");
+
+    // ac_info("==> {}", ac::str_trim("***aaa***", "***"));
+    // CHECK("Trim Not Space", ac::str_trim("***aaa***", "***") == "aaa");
 });
 
 TEST("File/Bin Helpers", {

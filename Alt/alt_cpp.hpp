@@ -521,13 +521,17 @@ using ETimer = ElapsedTimer;
 
 [[nodiscard]] b8 str_contains(Str_RO str, Str_RO substr);
 [[nodiscard]] Vec<Str> str_split(Str_RO str, Str_RO delimeter);
+[[nodiscard]] Str str_join(Vec_RO<Str> strlist, Str_RO delimeter);
 [[nodiscard]] Str str_replace(Str str, Str_RO from, Str_RO to, b8 onlyFirstMatch = false);
 [[nodiscard]] Str str_replace_many(Str str, Vec_RO<Str> from, Vec_RO<Str> to, b8 sorted = false);
 
-[[nodiscard]] Str str_chop(Str_RO str, i32 count);
-[[nodiscard]] Str str_trim(Str str, Str_RO to_trim = " ");
-[[nodiscard]] Str str_trim_l(Str str, Str_RO to_trim = " ");
-[[nodiscard]] Str str_trim_r(Str str, Str_RO to_trim = " ");
+[[nodiscard]] Str str_cut(Str_RO str, i32 count);
+[[nodiscard]] Str str_cut_l(Str_RO str, i32 count);
+[[nodiscard]] Str str_cut_r(Str_RO str, i32 count);
+
+[[nodiscard]] Str str_trim(Str str, Str_RO individual_chars_to_remove = " \n\r\t");
+[[nodiscard]] Str str_trim_l(Str str, Str_RO individual_chars_to_remove = " \n\r\t");
+[[nodiscard]] Str str_trim_r(Str str, Str_RO individual_chars_to_remove = " \n\r\t");
 
 
 //-------------------------------------
@@ -634,22 +638,41 @@ Str str_capital(Str str) {
 b8 str_contains(Str_RO str, Str_RO substr) { return str.find(substr) < str.size(); }
 
 Vec<Str> str_split(Str_RO str, Str_RO delimeter) {
+
     Str token;
     Vec<Str> splitted;
     usize ini = 0;
     usize end = 0;
+
     // Split and store the string body
     while ((end = str.find(delimeter, ini)) < str.size()) {
         token = str.substr(ini, end - ini);
         ini = end + delimeter.size();
         splitted.push_back(token);
     }
+
     // Store the string tail
     if (ini < str.size()) {
         token = str.substr(ini);
         splitted.push_back(token);
     }
+
     return splitted;
+}
+
+Str str_join(Vec_RO<Str> strlist, Str_RO delimeter) {
+
+    if (strlist.empty()) {
+        return "";
+    }
+
+    Str s;
+    for (usize i = 0; i < strlist.size() - 1; ++i) {
+        s += strlist[i] + delimeter;
+    }
+    s += strlist[strlist.size() - 1];
+
+    return s;
 }
 
 Str str_replace(Str str, Str_RO from, Str_RO to, b8 only_first_match) {
@@ -664,6 +687,7 @@ Str str_replace(Str str, Str_RO from, Str_RO to, b8 only_first_match) {
 }
 
 Str str_replace_many(Str str, Vec_RO<Str> from, Vec_RO<Str> to, b8 sorted) {
+
     b8 const same_size = from.size() == to.size();
     b8 const is_empty = same_size && from.size() < 1;
     if (!same_size || is_empty) {
@@ -687,29 +711,19 @@ Str str_replace_many(Str str, Vec_RO<Str> from, Vec_RO<Str> to, b8 sorted) {
     return str;
 }
 
-Str str_chop(Str_RO str, i32 count) {
-    if (count >= str.size()) {
-        ac_warn("{}", "'chop' count is bigger than passed string, empty string returned");
-        return "";
-    }
-    return str.substr(0, str.size() - count);
-}
+Str str_cut(Str_RO str, i32 count) { return str_cut_r(str_cut_l(str, count), count); }
+Str str_cut_l(Str_RO str, i32 count) { return str.substr(count); }
+Str str_cut_r(Str_RO str, i32 count) { return str.substr(0, std::max(i32(str.size()) - count, count)); }
 
-Str str_trim(Str str, Str_RO to_trim) {
-    auto const l = str_trim_l(str, to_trim);
-    return str_trim_r(l, to_trim);
+Str str_trim(Str str, Str_RO individual_chars_to_remove) {
+    auto const l = str_trim_l(str, individual_chars_to_remove);
+    return str_trim_r(l, individual_chars_to_remove);
 }
-Str str_trim_l(Str str, Str_RO to_trim) {
-    if (str.starts_with(to_trim)) {
-        str.replace(str.find_first_of(to_trim), to_trim.length(), "");
-    }
-    return str;
+Str str_trim_l(Str str, Str_RO individual_chars_to_remove) {
+    return str.erase(0, str.find_first_not_of(individual_chars_to_remove));
 }
-Str str_trim_r(Str str, Str_RO to_trim) {
-    if (str.ends_with(to_trim)) {
-        str.replace(str.find_last_of(to_trim), to_trim.length(), "");
-    }
-    return str;
+Str str_trim_r(Str str, Str_RO individual_chars_to_remove) {
+    return str.erase(str.find_last_not_of(individual_chars_to_remove) + 1);
 }
 
 
