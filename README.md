@@ -1,4 +1,5 @@
-# 🪩 Disco: Opinionated set of tools for saner C++ 20>
+# 🪩 Disco:
+> An opinionated set of tools for saner C++ 20>
 
 ## Content
 
@@ -20,7 +21,7 @@
 
 **None** 🥳
 
-- If you are using a version lower than C++20, please copy [`tcb_span.hpp`](https://github.com/tcbrindle/span/blob/master/include/tcb/span.hpp) at the same level than `alt_cpp.hpp`, otherwise you can ignore that file
+- If you are using a version lower than C++20, please copy [`tcb_span.hpp`](https://github.com/tcbrindle/span/blob/master/include/tcb/span.hpp) at the same level than `disco.hpp`, otherwise you can ignore that file
 
 - fmtlib is integrated but not required
 
