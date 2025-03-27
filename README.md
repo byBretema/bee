@@ -1,4 +1,4 @@
-# 🪩 Disco:
+# 🪩 Disco
 > An opinionated set of tools for saner C++ 20>
 
 ## Content
