@@ -1,6 +1,6 @@
 #pragma once
 
-/* alt_cpp (ac) - v0.01
+/* disco (dc) - v0.01
 
     An alternative take on cpp.
     Basically some aliases and helpers.
@@ -15,40 +15,47 @@
 
     -- Classic header-only stuff, add this:
 
-    #define ALT_CPP_IMPLEMENTATION
+    #define DISCO_IMPLEMENTATION
 
     -- Before you include this file in *one* C++ file to create the
     implementation, something like this:
 
     #include ...
     #include ...
-    #define ALT_CPP_IMPLEMENTATION
-    #include "alt.hpp"
+    #define DISCO_IMPLEMENTATION
+    #include "disco.hpp"
 
     =============================================
     ! Define-Based options:
     =============================================
 
-    -- If you use fmt-lib, 'alt' will include basic fmt header files and
-    expose, basic log methods: ac_info/warn/err/debug("", ...),
-    this will also undefine 'ALT_CPP_USE_FAKE_FMT'
+    -- If you use fmt-lib, 'disco' will include basic fmt header files and
+    expose, basic log methods: dcInfo/Warn/Err/Debug("", ...),
+    this will also undefine 'DISCO_USE_FAKE_FMT'
 
-    #define ALT_CPP_INCLUDE_FMT
+    #define DISCO_INCLUDE_FMT
 
-    -- If you use glm-lib, 'alt' will include basic glm header files
+    -- If you use glm-lib, 'disco' will include basic glm header files
 
-    #define ALT_CPP_INCLUDE_GLM
+    #define DISCO_INCLUDE_GLM
 
     -- Use a naïve fmt-like custom implemenation (will be disabled if
-    'ALT_CPP_INCLUDE_FMT' is present)
+    'DISCO_INCLUDE_FMT' is present)
 
-    #define ALT_CPP_USE_FAKE_FMT
+    #define DISCO_USE_FAKE_FMT
 */
 
 
-//=========================================================
-//== INCLUDES
-//=========================================================
+// ############################################################################
+// #                                                                          #
+// #                                                                          #
+// #                                INCLUDES                                  #
+// #                                                                          #
+// #                                                                          #
+// ############################################################################
+
+// ==============================================
+// ========== STD
 
 #include <chrono>
 #include <cmath>
@@ -74,6 +81,9 @@
 
 #include <iso646.h>
 
+// ==============================================
+// ========== SPAN
+
 #if __cplusplus >= 202002L
 #include <span>
 #else
@@ -81,14 +91,20 @@
 #include "tcb_span.hpp"
 #endif
 
-#ifdef ALT_CPP_INCLUDE_FMT
+// ==============================================
+// ========== FMT
+
+#ifdef DISCO_INCLUDE_FMT
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <fmt/std.h>
 #endif
 
-#ifdef ALT_CPP_INCLUDE_GLM
+// ==============================================
+// ========== GLM
+
+#ifdef DISCO_INCLUDE_GLM
 // #define GLM_FORCE_SSE
 // #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #define GLM_ENABLE_EXPERIMENTAL
@@ -112,36 +128,53 @@
 #endif
 
 
-//=========================================================
-//== CONCAT
-//=========================================================
+// ############################################################################
+// #                                                                          #
+// #                                                                          #
+// #                                  CONCAT                                  #
+// #                                                                          #
+// #                                                                          #
+// ############################################################################
 
-#define __AC_CONCAT2(l, r) l##r
-#define __AC_CONCAT1(l, r) __AC_CONCAT2(l, r)
-#define AC_CONCAT(l, r) __AC_CONCAT1(l, r)
+#ifndef DISCO_CONCAT
+#define __DISCO_CONCAT2(l, r) l##r
+#define __DISCO_CONCAT1(l, r) __DISCO_CONCAT2(l, r)
+#define DISCO_CONCAT(l, r) __DISCO_CONCAT1(l, r)
+#endif
 
 
-//=========================================================
-//== DEFER
-//=========================================================
+// ############################################################################
+// #                                                                          #
+// #                                                                          #
+// #                                   DEFER                                  #
+// #                                                                          #
+// #                                                                          #
+// ############################################################################
 
+// ==============================================
+// ========== By reference
 
-#define ac_defer(fn) const auto AC_CONCAT(defer__, __LINE__) = ac::detail::Defer([&]() { fn; })
 #ifndef defer
-#define defer(fn) ac_defer(fn)
+#define defer(fn) const auto DISCO_CONCAT(defer__, __LINE__) = dc::details::Defer([&]() { fn; })
 #else
-#warning "[alt_cpp] :: 'defer' is already defined using it might end in a missbehave"
+#warning "[disco] :: 'defer' is already defined using it might end in a missbehave"
 #endif
 
-#define ac_deferc(fn) const auto AC_CONCAT(defer__, __LINE__) = ac::detail::Defer([=]() { fn; })
+// ==============================================
+// ========== By reference
+
 #ifndef deferc
-#define deferc(fn) ac_deferc(fn)
+#define deferc(fn) const auto DISCO_CONCAT(defer__, __LINE__) = dc::details::Defer([=]() { fn; })
 #else
-#warning "[alt_cpp] :: 'deferc' is already defined using it might end in a missbehave"
+#warning "[disco] :: 'deferc' is already defined using it might end in a missbehave"
 #endif
 
-namespace ac::detail {
-template <typename T> // <- Thanks @javiersalcedopuyo
+// ==============================================
+// ========== Implementation
+
+namespace dc::details {
+
+template <typename T> // Faster compilation than std::funcition : Credits to @javiersalcedopuyo
 class Defer {
 public:
     Defer() = delete;
@@ -151,46 +184,59 @@ public:
 private:
     const T fn;
 };
-} // namespace ac::detail
 
-//=========================================================
-//== LOGGING
-//=========================================================
+} // namespace dc::details
 
-#ifdef ALT_CPP_INCLUDE_FMT
-#undef ALT_CPP_USE_FAKE_FMT
+// ############################################################################
+// #                                                                          #
+// #                                                                          #
+// #                            FORMAT and PRINT                              #
+// #                                                                          #
+// #                                                                          #
+// ############################################################################
+
+// ==============================================
+// ========== Fmt lib or not
+
+#ifdef DISCO_INCLUDE_FMT //  <-- Use fmtlib
+#undef DISCO_USE_FAKE_FMT
 // String Builder
-#define ac_fmt(msg, ...) fmt::format(msg, __VA_ARGS__)
+#define dc_fmt(msg, ...) fmt::format(msg, __VA_ARGS__)
 // Log Builder
-#define __ac_log(level, msg, ...) fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, ac_fmt(msg, __VA_ARGS__))
-#define __ac_log_flat(msg, ...) fmt::println("{}", ac_fmt(msg, __VA_ARGS__))
-#else
-#if !defined(ALT_CPP_USE_FAKE_FMT)
-#warning "[alt_cpp] :: Using fmt-lib will improve experience (and performance) of ac_fmt/info/err/.. methods a lot."
-#endif
+#define DISCO_LOG(level, msg, ...)                                                                                     \
+    fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, dc_fmt(msg, __VA_ARGS__))
+#define DISCO_LOG_FLAT(msg, ...) fmt::println("{}", dc_fmt(msg, __VA_ARGS__))
+
+#else //  <-- Do not use fmtlib (rely on std::cout)
+#warning "[disco] :: Using fmt-lib will improve experience (and performance) of dcFmt/Info/Err/.. methods a lot."
+
 #include <iostream>
+
+#ifdef DISCO_USE_FAKE_FMT
 #include <regex>
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
-static const int ___ALT_CPP_COUT_SETUP = []() {
+static const int ___DISCO_COUT_SETUP = []() {
     SetConsoleOutputCP(CP_UTF8);
     return 0;
 }();
 #endif
 
-namespace ac::detail::format {
+namespace dc::detail::format {
+
 inline std::string format(std::string msg, std::vector<std::string> const &args) {
     if (args.size() < 1) {
         return msg;
     }
-#if !defined(ALT_CPP_USE_FAKE_FMT) // Append the args at the string's end
+#ifndef DISCO_USE_FAKE_FMT // Append the args at the string's end
     msg += " | <== ";
     for (size_t i = 0; i < args.size() - 1; ++i) {
         msg += "{ " + args[i] + " } : ";
     }
     msg += "{ " + args[args.size() - 1] + " }";
-#else                              // Replace the {} in the string
+#else                      // Replace the {} in the string
     static const std::regex pattern("\\{:?.?:?[^\\}^ ]*\\}"); // Trying to capture fmt mini-language
     auto args_it = args.begin();
 
@@ -204,7 +250,9 @@ inline std::string format(std::string msg, std::vector<std::string> const &args)
 #endif
     return msg;
 }
+
 inline std::vector<std::string> to_stringlist() { return {}; }
+
 template <typename T, typename... Args>
 inline std::vector<std::string> to_stringlist(T &&first, Args &&...args) {
     std::ostringstream oss;
@@ -214,76 +262,101 @@ inline std::vector<std::string> to_stringlist(T &&first, Args &&...args) {
     result.insert(result.end(), rest.begin(), rest.end());
     return result;
 }
-} // namespace ac::detail::format
+
+} // namespace dc::detail::format
 
 // String Builder
-#define ac_fmt(msg, ...) ac::detail::format::format(msg, ac::detail::format::to_stringlist(__VA_ARGS__))
+#define dc_fmt(msg, ...) dc::detail::format::format(msg, dc::detail::format::to_stringlist(__VA_ARGS__))
 
 // Log Builder
-#define __ac_log(level, msg, ...)                                                                                      \
-    std::cout << "[" << level << "] | " << __FILE__ << ":" << __LINE__ << " | " << ac_fmt(msg, __VA_ARGS__) << "\n"
-#define __ac_log_flat(msg, ...) std::cout << ac_fmt(msg, __VA_ARGS__) << "\n"
+#define DISCO_LOG(level, msg, ...)                                                                                     \
+    std::cout << "[" << level << "] | " << __FILE__ << ":" << __LINE__ << " | " << dc_fmt(msg, __VA_ARGS__) << "\n"
+#define DISCO_LOG_FLAT(msg, ...) std::cout << dc_fmt(msg, __VA_ARGS__) << "\n"
 #endif
 
-// Logging helpers
-#define ac_print(msg, ...) __ac_log_flat(msg, __VA_ARGS__)
-#define ac_info(msg, ...) __ac_log("INFO", msg, __VA_ARGS__)
-#define ac_warn(msg, ...) __ac_log("WARN", msg, __VA_ARGS__)
-#define ac_err(msg, ...) __ac_log("ERRO", msg, __VA_ARGS__)
-#define ac_debug(msg, ...) __ac_log("DEBG", msg, __VA_ARGS__)
+// ==============================================
+// ========== Macros for print and logging
 
-//=========================================================
-//== OTHER MACROS
-//=========================================================
+#define dc_print(msg, ...) DISCO_LOG_FLAT(msg, __VA_ARGS__)
+#define dc_info(msg, ...) DISCO_LOG("INFO", msg, __VA_ARGS__)
+#define dc_warn(msg, ...) DISCO_LOG("WARN", msg, __VA_ARGS__)
+#define dc_err(msg, ...) DISCO_LOG("ERRO", msg, __VA_ARGS__)
+#define dc_debug(msg, ...) DISCO_LOG("DEBG", msg, __VA_ARGS__)
 
-#define ac_bind(fn) [this](auto &&...args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
-#define ac_bit(x) (1 << x)
 
-#define ac_nocopy(T)                                                                                                   \
+// ############################################################################
+// #                                                                          #
+// #                                                                          #
+// #                              OTHER MACROS                                #
+// #                                                                          #
+// #                                                                          #
+// ############################################################################
+
+// ==============================================
+// ========== Misc
+
+#define dc_bind(fn) [this](auto &&...args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
+#define dc_bit(x) (1 << x)
+
+// ==============================================
+// ========== Class helpers
+
+#define dc_nocopy(T)                                                                                                   \
 public:                                                                                                                \
     T(T const &) = delete;                                                                                             \
     T &operator=(T const &) = delete;
 
-#define ac_nomove(T)                                                                                                   \
+#define dc_nomove(T)                                                                                                   \
 public:                                                                                                                \
     T(T &&) noexcept = delete;                                                                                         \
     T &operator=(T &&) noexcept = delete;
 
-#define ac_nocopy_nomove(T) ac_nocopy(T) ac_nomove(T)
+#define dc_nocopy_nomove(T) dcNoCopy(T) dcNoMove(T)
 
-#define ac_as(T, x) static_cast<T>(x)
-#define ac_as_force(T, x) ((T)(x))
+// ==============================================
+// ========== Cast helpers
+
 #ifndef as
-#define as(T, x) ac_as(T, x)
-#define as_force(T, x) ac_as_force(T, x)
+#define as(T, x) static_cast<T>(x)
 #else
-#warning "[alt_cpp] :: 'as' is already defined using it might end in a missbehave"
+#warning "[disco] :: 'as' is already defined using it might end in a missbehave"
 #endif
 
-// #define ac_let auto const
-// #ifndef let
-// #define let ac_let
-// #else
-// #warning "[alt_cpp] :: 'let' is already defined using it might end in a missbehave"
-// #endif
+#ifndef recast
+#define recast(T, x) ((T)(x))
+#else
+#warning "[disco] :: 'recast' is already defined using it might end in a missbehave"
+#endif
 
-// #define ac_var auto
-// #ifndef var
-// #define var ac_var
-// #else
-// #warning "[alt_cpp] :: 'var' is already defined using it might end in a missbehave"
-// #endif
+// ==============================================
+// ========== Type helpers
+
+#ifndef let
+#define let auto const
+#else
+#warning "[disco] :: 'let' is already defined using it might end in a missbehave"
+#endif
+
+#ifndef mut
+#define mut auto
+#else
+#warning "[disco] :: 'mut' is already defined using it might end in a missbehave"
+#endif
 
 
-//=========================================================
-//== NAMESPACE
-//=========================================================
+// ############################################################################
+// #                                                                          #
+// #                                                                          #
+// #                                NAMESPACE                                 #
+// #                                                                          #
+// #                                                                          #
+// ############################################################################
 
-namespace ac {
+namespace dc {
 
-//-------------------------------------
-// ... Numbers Aliases
-//-------------------------------------
+
+// ==============================================
+// ========== Numbers Aliases
 
 namespace TypeAlias_Numbers {
 
@@ -338,9 +411,8 @@ inline constexpr f64 f64_epsilon = std::numeric_limits<f64>::epsilon();
 using namespace TypeAlias_Numbers;
 
 
-//-------------------------------------
-// ... Pointers Aliases
-//-------------------------------------
+// ==============================================
+// ========== Pointers Aliases
 
 namespace TypeAlias_Pointers {
 
@@ -364,62 +436,35 @@ template <typename T, typename... Args>
 using namespace TypeAlias_Pointers;
 
 
-//-------------------------------------
-// ... Containers Aliases
-//-------------------------------------
+// ==============================================
+// ========== Containers Aliases
 
 namespace TypeAlias_Containers {
-
-// RO : Read Only (aka: const &)
-// RW : Read and Write (aka: &)
+// <type>_ : Read Only (aka: const &)
 
 // Unordered Map
 template <typename K, typename V>
 using Umap = std::unordered_map<K, V>;
-template <typename K, typename V>
-using Umap_RO = std::unordered_map<K, V> const &;
-template <typename K, typename V>
-using Umap_RW = std::unordered_map<K, V> &;
 
 // Ordered Map
 template <typename K, typename V>
 using Omap = std::map<K, V>;
-template <typename K, typename V>
-using Omap_RO = std::map<K, V> const &;
-template <typename K, typename V>
-using Omap_RW = std::map<K, V> const &;
 
 // Unordered Set
 template <typename T>
 using Uset = std::unordered_set<T>;
-template <typename T>
-using Uset_RO = std::unordered_set<T> const &;
-template <typename T>
-using Uset_RW = std::unordered_set<T> &;
 
 // Ordered Set
 template <typename T>
 using Oset = std::set<T>;
-template <typename T>
-using Oset_RO = std::set<T> const &;
-template <typename T>
-using Oset_RW = std::set<T> &;
 
 // Dynamic Array
 template <typename T>
 using Vec = std::vector<T>;
-template <typename T>
-using Vec_RO = std::vector<T> const &;
-template <typename T>
-using Vec_RW = std::vector<T> &;
 
 // Array
 template <typename T, size_t S>
 using Arr = std::array<T, S>;
-template <typename T, size_t S>
-using Arr_RO = std::array<T, S> const &;
-template <typename T, size_t S>
-using Arr_RW = std::array<T, S> &;
 
 // Optional
 template <typename T>
@@ -429,30 +474,25 @@ using OptRef = std::optional<std::reference_wrapper<T>>;
 
 // String
 using Str = std::string;
-using Str_RO = std::string const &;
-using Str_RW = std::string &;
 
 // Function
 template <typename T>
 using Fn = std::function<T>;
-template <typename T>
-using Fn_RO = std::function<T>;
 
 // Span
 template <typename T>
 using Span = std::span<T>;
 template <typename T>
-using Span_RO = std::span<const T>;
+using SpanConst = std::span<const T>;
 
 } // namespace TypeAlias_Containers
 using namespace TypeAlias_Containers;
 
 
-//-------------------------------------
-// ... GLM Aliases
-//-------------------------------------
+// ==============================================
+// ========== GLM Aliases
 
-#ifdef ALT_CPP_INCLUDE_GLM
+#ifdef DISCO_INCLUDE_GLM
 
 namespace TypeAlias_GLM {
 using Vec2 = glm::vec2;
@@ -460,15 +500,14 @@ using Vec3 = glm::vec3;
 using Vec4 = glm::vec4;
 using Mat4 = glm::mat4;
 } // namespace TypeAlias_GLM
-using namespace TypeAlias_GLM;
 #else
 namespace TypeAlias_GLM {} // namespace TypeAlias_GLM
 #endif
+using namespace TypeAlias_GLM;
 
 
-//-------------------------------------
-// ... Time Consts
-//-------------------------------------
+// ==============================================
+// ========== Time Consts
 
 inline constexpr f64 s_to_ms = 1e+3;
 inline constexpr f64 s_to_us = 1e+6;
@@ -487,9 +526,8 @@ inline constexpr f64 ns_to_ms = 1e-6;
 inline constexpr f64 ns_to_us = 1e-3;
 
 
-//-------------------------------------
-// ... Elapsed Timer
-//-------------------------------------
+// ==============================================
+// ========== Elapsed Timer
 
 class ElapsedTimer {
 public:
@@ -511,55 +549,51 @@ private:
 using ETimer = ElapsedTimer;
 
 
-//-------------------------------------
-// ... String Utils
-//-------------------------------------
+// ==============================================
+// ========== String Utils
 
 [[nodiscard]] Str str_lower(Str str);
 [[nodiscard]] Str str_upper(Str str);
 [[nodiscard]] Str str_capital(Str str);
 
-[[nodiscard]] b8 str_contains(Str_RO str, Str_RO substr);
-[[nodiscard]] Vec<Str> str_split(Str_RO str, Str_RO delimeter);
-[[nodiscard]] Str str_join(Vec_RO<Str> strlist, Str_RO delimeter);
-[[nodiscard]] Str str_replace(Str str, Str_RO from, Str_RO to, b8 onlyFirstMatch = false);
-[[nodiscard]] Str str_replace_many(Str str, Vec_RO<Str> from, Vec_RO<Str> to, b8 sorted = false);
+[[nodiscard]] b8 str_contains(Str const &str, Str const &substr);
+[[nodiscard]] Vec<Str> str_split(Str const &str, Str const &delimeter);
+[[nodiscard]] Str str_join(Vec<Str> const &strlist, Str const &delimeter);
+[[nodiscard]] Str str_replace(Str str, Str const &from, Str const &to, b8 onlyFirstMatch = false);
+[[nodiscard]] Str str_replace_many(Str str, Vec<Str> const &from, Vec<Str> const &to, b8 sorted = false);
 
-[[nodiscard]] Str str_cut(Str_RO str, i32 count);
-[[nodiscard]] Str str_cut_l(Str_RO str, i32 count);
-[[nodiscard]] Str str_cut_r(Str_RO str, i32 count);
+[[nodiscard]] Str str_cut(Str const &str, i32 count);
+[[nodiscard]] Str str_cut_l(Str const &str, i32 count);
+[[nodiscard]] Str str_cut_r(Str const &str, i32 count);
 
-[[nodiscard]] Str str_trim(Str str, Str_RO individual_chars_to_remove = " \n\r\t");
-[[nodiscard]] Str str_trim_l(Str str, Str_RO individual_chars_to_remove = " \n\r\t");
-[[nodiscard]] Str str_trim_r(Str str, Str_RO individual_chars_to_remove = " \n\r\t");
-
-
-//-------------------------------------
-// ... Binary Utils
-//-------------------------------------
-
-[[nodiscard]] Vec<u8> bin_read(Str_RO path);
-[[nodiscard]] b8 bin_check_magic(Span_RO<u8> bin, Span_RO<u8> magic);
+[[nodiscard]] Str str_trim(Str str, Str const &individual_chars_to_remove = " \n\r\t");
+[[nodiscard]] Str str_trim_l(Str str, Str const &individual_chars_to_remove = " \n\r\t");
+[[nodiscard]] Str str_trim_r(Str str, Str const &individual_chars_to_remove = " \n\r\t");
 
 
-//-------------------------------------
-// ... Files Utils
-//-------------------------------------
+// ==============================================
+// ========== Binary Utils
 
-[[nodiscard]] Str file_read(Str_RO input_file);
-
-b8 file_write_append(Str_RO output_file, Str_RO to_write);
-b8 file_write_trunc(Str_RO output_file, Str_RO to_write);
-
-b8 file_write_append(Str_RO output_file, const char *data, usize data_size);
-b8 file_write_trunc(Str_RO output_file, const char *data, usize data_size);
-
-b8 file_check_extension(Str_RO input_file, Str ext);
+[[nodiscard]] Vec<u8> bin_read(Str const &path);
+[[nodiscard]] b8 bin_check_magic(SpanConst<u8> bin, SpanConst<u8> magic);
 
 
-//-------------------------------------
-// ... Math Utils
-//-------------------------------------
+// ==============================================
+// ========== Files Utils
+
+[[nodiscard]] Str file_read(Str const &input_file);
+
+b8 file_write_append(Str const &output_file, Str const &to_write);
+b8 file_write_trunc(Str const &output_file, Str const &to_write);
+
+b8 file_write_append(Str const &output_file, const char *data, usize data_size);
+b8 file_write_trunc(Str const &output_file, const char *data, usize data_size);
+
+b8 file_check_extension(Str const &input_file, Str ext);
+
+
+// ==============================================
+// ========== Math Utils
 
 [[nodiscard]] f32 map(f32 value, f32 srcMin, f32 srcMax, f32 dstMin, f32 dstMax);
 [[nodiscard]] f32 map_100(f32 value, f32 dstMin, f32 dstMax);
@@ -568,7 +602,7 @@ b8 file_check_extension(Str_RO input_file, Str ext);
 
 [[nodiscard]] f32 clampAngle(f32 angle);
 
-#ifdef ALT_CPP_INCLUDE_GLM
+#ifdef DISCO_INCLUDE_GLM
 [[nodiscard]] b8 fuzzyEq(Vec2 const &v1, Vec2 const &v2, f32 t = 0.01f);
 [[nodiscard]] b8 fuzzyEq(Vec3 const &v1, Vec3 const &v2, f32 t = 0.01f);
 [[nodiscard]] b8 fuzzyEq(Vec4 const &v1, Vec4 const &v2, f32 t = 0.01f);
@@ -579,28 +613,29 @@ template <typename T>
 }
 #endif
 
-} // namespace ac
+} // namespace dc
 
 
-//=============================================================================
-//=============================================================================
-// ALT_CPP IMPLEMENTATIONs
-//=============================================================================
-//=============================================================================
+// ############################################################################
+// #                                                                          #
+// #                                                                          #
+// #                            IMPLEMENTATION                                #
+// #                                                                          #
+// #                                                                          #
+// ############################################################################
 
-#ifdef ALT_CPP_IMPLEMENTATION
+#ifdef DISCO_IMPLEMENTATION
 
-#ifndef __ALT_CPP_IMPLEMENTATION_GUARD
-#define __ALT_CPP_IMPLEMENTATION_GUARD
+#ifndef __DISCO_IMPLEMENTATION_GUARD
+#define __DISCO_IMPLEMENTATION_GUARD
 
 #include <fstream>
 
-namespace ac {
+namespace dc {
 namespace fs = std::filesystem;
 
-//-------------------------------------
-// ... Elapsed Timer
-//-------------------------------------
+// ==============================================
+// ========== Elapsed Timer
 
 void ElapsedTimer::reset() {
     m_valid = true;
@@ -617,9 +652,8 @@ i64 ElapsedTimer::elapsed() const {
 }
 
 
-//-------------------------------------
-// ... String Utils
-//-------------------------------------
+// ==============================================
+// ========== String Utils
 
 Str str_lower(Str str) {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
@@ -635,9 +669,9 @@ Str str_capital(Str str) {
     return str;
 }
 
-b8 str_contains(Str_RO str, Str_RO substr) { return str.find(substr) < str.size(); }
+b8 str_contains(Str const &str, Str const &substr) { return str.find(substr) < str.size(); }
 
-Vec<Str> str_split(Str_RO str, Str_RO delimeter) {
+Vec<Str> str_split(Str const &str, Str const &delimeter) {
 
     Str token;
     Vec<Str> splitted;
@@ -660,7 +694,7 @@ Vec<Str> str_split(Str_RO str, Str_RO delimeter) {
     return splitted;
 }
 
-Str str_join(Vec_RO<Str> strlist, Str_RO delimeter) {
+Str str_join(Vec<Str> const &strlist, Str const &delimeter) {
 
     if (strlist.empty()) {
         return "";
@@ -675,7 +709,7 @@ Str str_join(Vec_RO<Str> strlist, Str_RO delimeter) {
     return s;
 }
 
-Str str_replace(Str str, Str_RO from, Str_RO to, b8 only_first_match) {
+Str str_replace(Str str, Str const &from, Str const &to, b8 only_first_match) {
     usize pos = 0;
     while ((pos = str.find(from)) < str.size()) {
         str.replace(pos, from.length(), to);
@@ -686,7 +720,7 @@ Str str_replace(Str str, Str_RO from, Str_RO to, b8 only_first_match) {
     return str;
 }
 
-Str str_replace_many(Str str, Vec_RO<Str> from, Vec_RO<Str> to, b8 sorted) {
+Str str_replace_many(Str str, Vec<Str> const &from, Vec<Str> const &to, b8 sorted) {
 
     b8 const same_size = from.size() == to.size();
     b8 const is_empty = same_size && from.size() < 1;
@@ -711,34 +745,33 @@ Str str_replace_many(Str str, Vec_RO<Str> from, Vec_RO<Str> to, b8 sorted) {
     return str;
 }
 
-Str str_cut(Str_RO str, i32 count) { return str_cut_r(str_cut_l(str, count), count); }
-Str str_cut_l(Str_RO str, i32 count) { return str.substr(count); }
-Str str_cut_r(Str_RO str, i32 count) { return str.substr(0, std::max(i32(str.size()) - count, count)); }
+Str str_cut(Str const &str, i32 count) { return str_cut_r(str_cut_l(str, count), count); }
+Str str_cut_l(Str const &str, i32 count) { return str.substr(count); }
+Str str_cut_r(Str const &str, i32 count) { return str.substr(0, std::max(i32(str.size()) - count, count)); }
 
-Str str_trim(Str str, Str_RO individual_chars_to_remove) {
+Str str_trim(Str str, Str const &individual_chars_to_remove) {
     auto const l = str_trim_l(str, individual_chars_to_remove);
     return str_trim_r(l, individual_chars_to_remove);
 }
-Str str_trim_l(Str str, Str_RO individual_chars_to_remove) {
+Str str_trim_l(Str str, Str const &individual_chars_to_remove) {
     return str.erase(0, str.find_first_not_of(individual_chars_to_remove));
 }
-Str str_trim_r(Str str, Str_RO individual_chars_to_remove) {
+Str str_trim_r(Str str, Str const &individual_chars_to_remove) {
     return str.erase(str.find_last_not_of(individual_chars_to_remove) + 1);
 }
 
 
-//-------------------------------------
-// ... Binary Utils
-//-------------------------------------
+// ==============================================
+// ========== Binary Utils
 
-Vec<u8> bin_read(Str_RO path) {
+Vec<u8> bin_read(Str const &path) {
     std::ifstream file { path, std::ios::binary };
     auto fileBegin = std::istreambuf_iterator<char>(file);
     auto fileEnd = std::istreambuf_iterator<char>();
     return { fileBegin, fileEnd };
 }
 
-b8 bin_check_magic(Span_RO<u8> bin, Span_RO<u8> magic) {
+b8 bin_check_magic(SpanConst<u8> bin, SpanConst<u8> magic) {
     // Validation
     if (magic.empty() || bin.size() < magic.size()) {
         return false;
@@ -753,17 +786,16 @@ b8 bin_check_magic(Span_RO<u8> bin, Span_RO<u8> magic) {
 }
 
 
-//-------------------------------------
-// ...Files Utils
-//-------------------------------------
+// ==============================================
+// ========== Files Utils
 
-Str file_read(Str_RO input_file) {
+Str file_read(Str const &input_file) {
     std::ifstream file(input_file, std::ios::ate | std::ios::binary);
-    ac_defer(file.close());
+    defer(file.close());
 
     if (!file.is_open()) {
         return "";
-        ac_err("Issues opening file [r]: {}", input_file);
+        dc_err("Issues opening file [r]: {}", input_file);
     }
 
     Str content;
@@ -774,38 +806,38 @@ Str file_read(Str_RO input_file) {
     return content;
 }
 
-b8 file_write(Str_RO output_file, char const *data, usize data_size, std::ios_base::openmode mode) {
+b8 file_write(Str const &output_file, char const *data, usize data_size, std::ios_base::openmode mode) {
     if (!data || data_size < 1) {
         return false;
-        ac_err("[file_write] Invalid data: {}", output_file);
+        dc_err("[file_write] Invalid data: {}", output_file);
     }
 
     std::ofstream file(output_file, std::ios::out | std::ios::binary | mode);
-    ac_defer(file.close());
+    defer(file.close());
 
     if (!file.is_open()) {
         return false;
-        ac_err("[file_write] Opening file: {}", output_file);
+        dc_err("[file_write] Opening file: {}", output_file);
     }
 
     file.write(data, data_size);
 
     return true;
 }
-b8 file_write_append(Str_RO output_file, Str_RO to_write) {
+b8 file_write_append(Str const &output_file, Str const &to_write) {
     return file_write(output_file, to_write.data(), to_write.size(), std::ios::app);
 }
-b8 file_write_trunc(Str_RO output_file, Str_RO to_write) {
+b8 file_write_trunc(Str const &output_file, Str const &to_write) {
     return file_write(output_file, to_write.data(), to_write.size(), std::ios::trunc);
 }
-b8 file_write_append(Str_RO output_file, const char *data, usize data_size) {
+b8 file_write_append(Str const &output_file, const char *data, usize data_size) {
     return file_write(output_file, data, data_size, std::ios::app);
 }
-b8 file_write_trunc(Str_RO output_file, const char *data, usize data_size) {
+b8 file_write_trunc(Str const &output_file, const char *data, usize data_size) {
     return file_write(output_file, data, data_size, std::ios::trunc);
 }
 
-b8 file_check_extension(Str_RO input_file, Str ext) {
+b8 file_check_extension(Str const &input_file, Str ext) {
     auto to_check = input_file.substr(input_file.find_last_of('.') + 1);
     std::transform(to_check.begin(), to_check.end(), to_check.begin(), ::tolower);
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
@@ -813,9 +845,8 @@ b8 file_check_extension(Str_RO input_file, Str ext) {
 }
 
 
-//-------------------------------------
-// ... Math Utils
-//-------------------------------------
+// ==============================================
+// ========== Math Utils
 
 f32 map(f32 value, f32 srcMin, f32 srcMax, f32 dstMin, f32 dstMax) {
     return dstMin + (dstMax - dstMin) * (value - srcMin) / (srcMax - srcMin);
@@ -831,7 +862,7 @@ f32 clampAngle(f32 angle) {
     return angle - 360.f * turns;
 }
 
-#ifdef ALT_CPP_INCLUDE_GLM
+#ifdef DISCO_INCLUDE_GLM
 b8 fuzzyEq(Vec2 const &v1, Vec2 const &v2, f32 t) { return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t); }
 b8 fuzzyEq(Vec3 const &v1, Vec3 const &v2, f32 t) {
     return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t) && fuzzyEq(v1.z, v2.z, t);
@@ -841,13 +872,7 @@ b8 fuzzyEq(Vec4 const &v1, Vec4 const &v2, f32 t) {
 }
 #endif
 
+} // namespace dc
 
-//-------------------------------------
-// ...
-//-------------------------------------
-
-} // namespace ac
-
-#endif // __ALT_CPP_IMPLEMENTATION_GUARD
-
-#endif // ALT_CPP_IMPLEMENTATION
+#endif // __DISCO_IMPLEMENTATION_GUARD
+#endif // DISCO_IMPLEMENTATION

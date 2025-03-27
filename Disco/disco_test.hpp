@@ -1,6 +1,6 @@
 #pragma once
 
-/* alt_test - v0.01
+/* disco_test - v0.01
 
     Nano framework for testing
 
@@ -12,17 +12,26 @@
 
     -- Classic header-only stuff, add this:
 
-    #define ALT_TEST_IMPLEMENTATION
+    #define DISCO_TEST_IMPLEMENTATION
 
     -- Before you include this file in *one* C++ file to create the
     implementation, something like this:
 
     #include ...
     #include ...
-    #define ALT_TEST_IMPLEMENTATION
-    #include "alt_test.hpp"
+    #define DISCO_TEST_IMPLEMENTATION
+    #include "disco_test.hpp"
 
 */
+
+
+// ############################################################################
+// #                                                                          #
+// #                                                                          #
+// #                                INCLUDES                                  #
+// #                                                                          #
+// #                                                                          #
+// ############################################################################
 
 #include <cassert>
 #include <cstdint>
@@ -30,52 +39,78 @@
 #include <iostream>
 #include <vector>
 
-//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-namespace ac::test {
+// ############################################################################
+// #                                                                          #
+// #                                                                          #
+// #                                NAMESPACE                                 #
+// #                                                                          #
+// #                                                                          #
+// ############################################################################
+
+namespace dc::test {
 
 namespace detail {
+
 struct Error {
     const char *name = "";
     const char *file = "";
     int line = -1;
 };
+
 struct Result {
     std::vector<Error> errors {};
     int32_t total_count = 0;
     int32_t fail_count = 0;
     int32_t pass_count = 0;
 };
+
 struct Test {
     const char *name = "";
     Result (*fn)(void) = nullptr;
 };
 
 void add(Test const &test);
+
 } // namespace detail
 
 void run();
 
-} // namespace ac::test
+} // namespace dc::test
 
-//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-#define __AC_TEST_CONCAT2(l, r) l##r
-#define __AC_TEST_CONCAT1(l, r) __AC_TEST_CONCAT2(l, r)
-#define __AC_TEST_CONCAT(l, r) __AC_TEST_CONCAT1(l, r)
+// ############################################################################
+// #                                                                          #
+// #                                                                          #
+// #                                  CONCAT                                  #
+// #                                                                          #
+// #                                                                          #
+// ############################################################################
 
-//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#ifndef DISCO_CONCAT
+#define __DISCO_CONCAT2(l, r) l##r
+#define __DISCO_CONCAT1(l, r) __DISCO_CONCAT2(l, r)
+#define DISCO_CONCAT(l, r) __DISCO_CONCAT1(l, r)
+#endif
 
+
+// ############################################################################
+// #                                                                          #
+// #                                                                          #
+// #                                 MACROS                                   #
+// #                                                                          #
+// #                                                                          #
+// ############################################################################
 
 #define TEST(name, ...)                                                                                                \
-    static inline int __AC_TEST_CONCAT(test_case__, __LINE__) = [] {                                                   \
-        ac::test::detail::Test test { name };                                                                          \
+    static inline int DISCO_CONCAT(test_case__, __LINE__) = [] {                                                       \
+        dc::test::detail::Test test { name };                                                                          \
         test.fn = []() {                                                                                               \
-            ac::test::detail::Result result;                                                                           \
+            dc::test::detail::Result result;                                                                           \
             __VA_ARGS__;                                                                                               \
             return result;                                                                                             \
         };                                                                                                             \
-        ac::test::detail::add(test);                                                                                   \
+        dc::test::detail::add(test);                                                                                   \
         return 0;                                                                                                      \
     }();
 
@@ -91,31 +126,32 @@ void run();
 
 #define TEST_CHECK(name, code) TEST(name, CHECK(name, code));
 
-//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+// ############################################################################
+// #                                                                          #
+// #                                                                          #
+// #                            IMPLEMENTATION                                #
+// #                                                                          #
+// #                                                                          #
+// ############################################################################
 
-//=============================================================================
-//=============================================================================
-// ALT_TEST_IMPLEMENTATION
-//=============================================================================
-//=============================================================================
+#ifdef DISCO_TEST_IMPLEMENTATION
 
-#ifdef ALT_TEST_IMPLEMENTATION
-
-#ifndef __ALT_TEST_IMPLEMENTATION_GUARD
-#define __ALT_TEST_IMPLEMENTATION_GUARD
+#ifndef __DISCO_TEST_IMPLEMENTATION_GUARD
+#define __DISCO_TEST_IMPLEMENTATION_GUARD
 
 #ifdef _WIN32
 #include <windows.h>
-static const int ___ALT_TEST_COUT_SETUP = []() {
+static const int ___DISCO_TEST_COUT_SETUP = []() {
     SetConsoleOutputCP(CP_UTF8);
     return 0;
 }();
 #endif
 
-namespace ac::test {
+namespace dc::test {
 
-//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// ==============================================
+// ========== Internal helpers
 
 namespace detail {
 
@@ -124,7 +160,8 @@ void add(Test const &test) { g_tests.push_back(test); }
 
 } // namespace detail
 
-//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// ==============================================
+// ========== Public API
 
 void run() {
 
@@ -170,10 +207,7 @@ void run() {
     std::cout << "❌ Fail  -> " << fail_count << "\n";
 }
 
-//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+} // namespace dc::test
 
-
-} // namespace ac::test
-
-#endif // __ALT_TEST_IMPLEMENTATION_GUARD
-#endif // ALT_TEST_IMPLEMENTATION
+#endif // __DISCO_TEST_IMPLEMENTATION_GUARD
+#endif // DISCO_TEST_IMPLEMENTATION
