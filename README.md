@@ -1,18 +1,18 @@
-# Alt Cpp tools
+# 🪩 Disco: Opinionated set of tools for saner C++ 20>
 
 ## Content
 
-- alt_cpp.hpp
+- disco.hpp
     - Defer
     - STL Aliases
     - Helper macros
     - Helper functions
     - Naïve fmt-like print
 
-- alt_test.hpp
+- dcTest.hpp
     - Just a tiny test framework
 
-- alt_bench.hpp
+- dcBench.hpp
     - Just a tiny benchmark framework
 
 
