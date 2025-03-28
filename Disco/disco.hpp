@@ -30,7 +30,7 @@
     =============================================
 
     -- If you use fmt-lib, 'disco' will include basic fmt header files and
-    expose, basic log methods: dcInfo/Warn/Err/Debug("", ...),
+    expose, basic log methods: dc_info/warn/err/debug("", ...),
     this will also undefine 'DISCO_USE_FAKE_FMT'
 
     #define DISCO_INCLUDE_FMT
@@ -208,7 +208,7 @@ private:
 #define DISCO_LOG_FLAT(msg, ...) fmt::println("{}", dc_fmt(msg, __VA_ARGS__))
 
 #else //  <-- Do not use fmtlib (rely on std::cout)
-#warning "[disco] :: Using fmt-lib will improve experience (and performance) of dcFmt/Info/Err/.. methods a lot."
+#warning "[disco] :: Using fmt-lib will improve experience (and performance) of dc_fmt/info/err/.. methods a lot."
 
 #include <iostream>
 

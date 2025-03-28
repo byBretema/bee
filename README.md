@@ -10,10 +10,10 @@
     - Helper functions
     - Naïve fmt-like print
 
-- dcTest.hpp
+- disco_test.hpp
     - Just a tiny test framework
 
-- dcBench.hpp
+- disco_bench.hpp
     - Just a tiny benchmark framework
 
 
