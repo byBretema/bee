@@ -1,6 +1,6 @@
 #pragma once
 
-/* disco (dc) - v0.01
+/* bee - v0.01
 
     An alternative take on cpp.
     Basically some aliases and helpers.
@@ -15,34 +15,34 @@
 
     -- Classic header-only stuff, add this:
 
-    #define DISCO_IMPLEMENTATION
+    #define BEE_IMPLEMENTATION
 
     -- Before you include this file in *one* C++ file to create the
     implementation, something like this:
 
     #include ...
     #include ...
-    #define DISCO_IMPLEMENTATION
-    #include "disco.hpp"
+    #define BEE_IMPLEMENTATION
+    #include "bee.hpp"
 
     =============================================
     ! Define-Based options:
     =============================================
 
-    -- If you use fmt-lib, 'disco' will include basic fmt header files and
-    expose, basic log methods: dc_info/warn/err/debug("", ...),
-    this will also undefine 'DISCO_USE_FAKE_FMT'
+    -- If you use fmt-lib, 'bee' will include basic fmt header files and
+    expose, basic log methods: bee_info/warn/err/debug("", ...),
+    this will also undefine 'BEE_USE_FAKE_FMT'
 
-    #define DISCO_INCLUDE_FMT
+    #define BEE_INCLUDE_FMT
 
-    -- If you use glm-lib, 'disco' will include basic glm header files
+    -- If you use glm-lib, 'bee' will include basic glm header files
 
-    #define DISCO_INCLUDE_GLM
+    #define BEE_INCLUDE_GLM
 
     -- Use a naïve fmt-like custom implemenation (will be disabled if
-    'DISCO_INCLUDE_FMT' is present)
+    'BEE_INCLUDE_FMT' is present)
 
-    #define DISCO_USE_FAKE_FMT
+    #define BEE_USE_FAKE_FMT
 */
 
 
@@ -94,7 +94,7 @@
 // ==============================================
 // ========== FMT
 
-#ifdef DISCO_INCLUDE_FMT
+#ifdef BEE_INCLUDE_FMT
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -104,7 +104,7 @@
 // ==============================================
 // ========== GLM
 
-#ifdef DISCO_INCLUDE_GLM
+#ifdef BEE_INCLUDE_GLM
 // #define GLM_FORCE_SSE
 // #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #define GLM_ENABLE_EXPERIMENTAL
@@ -136,10 +136,10 @@
 // #                                                                          #
 // ############################################################################
 
-#ifndef DISCO_CONCAT
-#define __DISCO_CONCAT2(l, r) l##r
-#define __DISCO_CONCAT1(l, r) __DISCO_CONCAT2(l, r)
-#define DISCO_CONCAT(l, r) __DISCO_CONCAT1(l, r)
+#ifndef BEE_CONCAT
+#define __BEE_CONCAT2(l, r) l##r
+#define __BEE_CONCAT1(l, r) __BEE_CONCAT2(l, r)
+#define BEE_CONCAT(l, r) __BEE_CONCAT1(l, r)
 #endif
 
 
@@ -155,24 +155,24 @@
 // ========== By reference
 
 #ifndef defer
-#define defer(fn) const auto DISCO_CONCAT(defer__, __LINE__) = dc::details::Defer([&]() { fn; })
+#define defer(fn) const auto BEE_CONCAT(defer__, __LINE__) = bee::details::Defer([&]() { fn; })
 #else
-#warning "[disco] :: 'defer' is already defined using it might end in a missbehave"
+#warning "[bee] :: 'defer' is already defined using it might end in a missbehave"
 #endif
 
 // ==============================================
 // ========== By reference
 
 #ifndef deferc
-#define deferc(fn) const auto DISCO_CONCAT(defer__, __LINE__) = dc::details::Defer([=]() { fn; })
+#define deferc(fn) const auto BEE_CONCAT(defer__, __LINE__) = bee::details::Defer([=]() { fn; })
 #else
-#warning "[disco] :: 'deferc' is already defined using it might end in a missbehave"
+#warning "[bee] :: 'deferc' is already defined using it might end in a missbehave"
 #endif
 
 // ==============================================
 // ========== Implementation
 
-namespace dc::details {
+namespace bee::details {
 
 template <typename T> // Faster compilation than std::funcition : Credits to @javiersalcedopuyo
 class Defer {
@@ -185,7 +185,8 @@ private:
     const T fn;
 };
 
-} // namespace dc::details
+} // namespace bee::details
+
 
 // ############################################################################
 // #                                                                          #
@@ -198,45 +199,45 @@ private:
 // ==============================================
 // ========== Fmt lib or not
 
-#ifdef DISCO_INCLUDE_FMT //  <-- Use fmtlib
-#undef DISCO_USE_FAKE_FMT
+#ifdef BEE_INCLUDE_FMT //  <-- Use fmtlib
+#undef BEE_USE_FAKE_FMT
 // String Builder
-#define dc_fmt(msg, ...) fmt::format(msg, __VA_ARGS__)
+#define bee_fmt(msg, ...) fmt::format(msg, __VA_ARGS__)
 // Log Builder
-#define DISCO_LOG(level, msg, ...)                                                                                     \
-    fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, dc_fmt(msg, __VA_ARGS__))
-#define DISCO_LOG_FLAT(msg, ...) fmt::println("{}", dc_fmt(msg, __VA_ARGS__))
+#define __BEE_LOG(level, msg, ...)                                                                                     \
+    fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, bee_fmt(msg, __VA_ARGS__))
+#define __BEE_LOG_FLAT(msg, ...) fmt::println("{}", bee_fmt(msg, __VA_ARGS__))
 
 #else //  <-- Do not use fmtlib (rely on std::cout)
-#warning "[disco] :: Using fmt-lib will improve experience (and performance) of dc_fmt/info/err/.. methods a lot."
+#warning "[bee] :: Using fmt-lib will improve experience (and performance) of bee_fmt/info/err/.. methods a lot."
 
 #include <iostream>
 
-#ifdef DISCO_USE_FAKE_FMT
+#ifdef BEE_USE_FAKE_FMT
 #include <regex>
 #endif
 
 #ifdef _WIN32
 #include <windows.h>
-static const int ___DISCO_COUT_SETUP = []() {
+static const int ___BEE_COUT_SETUP = []() {
     SetConsoleOutputCP(CP_UTF8);
     return 0;
 }();
 #endif
 
-namespace dc::detail::format {
+namespace bee::detail::format {
 
 inline std::string format(std::string msg, std::vector<std::string> const &args) {
     if (args.size() < 1) {
         return msg;
     }
-#ifndef DISCO_USE_FAKE_FMT // Append the args at the string's end
+#ifndef BEE_USE_FAKE_FMT // Append the args at the string's end
     msg += " | <== ";
     for (size_t i = 0; i < args.size() - 1; ++i) {
         msg += "{ " + args[i] + " } : ";
     }
     msg += "{ " + args[args.size() - 1] + " }";
-#else                      // Replace the {} in the string
+#else                    // Replace the {} in the string
     static const std::regex pattern("\\{:?.?:?[^\\}^ ]*\\}"); // Trying to capture fmt mini-language
     auto args_it = args.begin();
 
@@ -263,25 +264,25 @@ inline std::vector<std::string> to_stringlist(T &&first, Args &&...args) {
     return result;
 }
 
-} // namespace dc::detail::format
+} // namespace bee::detail::format
 
 // String Builder
-#define dc_fmt(msg, ...) dc::detail::format::format(msg, dc::detail::format::to_stringlist(__VA_ARGS__))
+#define bee_fmt(msg, ...) bee::detail::format::format(msg, bee::detail::format::to_stringlist(__VA_ARGS__))
 
 // Log Builder
-#define DISCO_LOG(level, msg, ...)                                                                                     \
-    std::cout << "[" << level << "] | " << __FILE__ << ":" << __LINE__ << " | " << dc_fmt(msg, __VA_ARGS__) << "\n"
-#define DISCO_LOG_FLAT(msg, ...) std::cout << dc_fmt(msg, __VA_ARGS__) << "\n"
+#define __BEE_LOG(level, msg, ...)                                                                                     \
+    std::cout << "[" << level << "] | " << __FILE__ << ":" << __LINE__ << " | " << bee_fmt(msg, __VA_ARGS__) << "\n"
+#define __BEE_LOG_FLAT(msg, ...) std::cout << bee_fmt(msg, __VA_ARGS__) << "\n"
 #endif
 
 // ==============================================
 // ========== Macros for print and logging
 
-#define dc_print(msg, ...) DISCO_LOG_FLAT(msg, __VA_ARGS__)
-#define dc_info(msg, ...) DISCO_LOG("INFO", msg, __VA_ARGS__)
-#define dc_warn(msg, ...) DISCO_LOG("WARN", msg, __VA_ARGS__)
-#define dc_err(msg, ...) DISCO_LOG("ERRO", msg, __VA_ARGS__)
-#define dc_debug(msg, ...) DISCO_LOG("DEBG", msg, __VA_ARGS__)
+#define bee_print(msg, ...) __BEE_LOG_FLAT(msg, __VA_ARGS__)
+#define bee_info(msg, ...) __BEE_LOG("INFO", msg, __VA_ARGS__)
+#define bee_warn(msg, ...) __BEE_LOG("WARN", msg, __VA_ARGS__)
+#define bee_err(msg, ...) __BEE_LOG("ERRO", msg, __VA_ARGS__)
+#define bee_debug(msg, ...) __BEE_LOG("DEBG", msg, __VA_ARGS__)
 
 
 // ############################################################################
@@ -295,23 +296,24 @@ inline std::vector<std::string> to_stringlist(T &&first, Args &&...args) {
 // ==============================================
 // ========== Misc
 
-#define dc_bind(fn) [this](auto &&...args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
-#define dc_bit(x) (1 << x)
+#define bee_bind(fn)                                                                                                   \
+    [this](auto &&...args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
+#define bee_bit(x) (1 << x)
 
 // ==============================================
 // ========== Class helpers
 
-#define dc_nocopy(T)                                                                                                   \
+#define bee_nocopy(T)                                                                                                  \
 public:                                                                                                                \
     T(T const &) = delete;                                                                                             \
     T &operator=(T const &) = delete;
 
-#define dc_nomove(T)                                                                                                   \
+#define bee_nomove(T)                                                                                                  \
 public:                                                                                                                \
     T(T &&) noexcept = delete;                                                                                         \
     T &operator=(T &&) noexcept = delete;
 
-#define dc_nocopy_nomove(T) dcNoCopy(T) dcNoMove(T)
+#define bee_nocopy_nomove(T) bee_nocopy(T) bee_nomove(T)
 
 // ==============================================
 // ========== Cast helpers
@@ -319,13 +321,13 @@ public:                                                                         
 #ifndef as
 #define as(T, x) static_cast<T>(x)
 #else
-#warning "[disco] :: 'as' is already defined using it might end in a missbehave"
+#warning "[bee] :: 'as' is already defined using it might end in a missbehave"
 #endif
 
 #ifndef recast
 #define recast(T, x) ((T)(x))
 #else
-#warning "[disco] :: 'recast' is already defined using it might end in a missbehave"
+#warning "[bee] :: 'recast' is already defined using it might end in a missbehave"
 #endif
 
 // ==============================================
@@ -334,13 +336,13 @@ public:                                                                         
 #ifndef let
 #define let auto const
 #else
-#warning "[disco] :: 'let' is already defined using it might end in a missbehave"
+#warning "[bee] :: 'let' is already defined using it might end in a missbehave"
 #endif
 
 #ifndef mut
 #define mut auto
 #else
-#warning "[disco] :: 'mut' is already defined using it might end in a missbehave"
+#warning "[bee] :: 'mut' is already defined using it might end in a missbehave"
 #endif
 
 
@@ -352,7 +354,7 @@ public:                                                                         
 // #                                                                          #
 // ############################################################################
 
-namespace dc {
+namespace bee {
 
 
 // ==============================================
@@ -492,7 +494,7 @@ using namespace TypeAlias_Containers;
 // ==============================================
 // ========== GLM Aliases
 
-#ifdef DISCO_INCLUDE_GLM
+#ifdef BEE_INCLUDE_GLM
 
 namespace TypeAlias_GLM {
 using Vec2 = glm::vec2;
@@ -602,7 +604,7 @@ b8 file_check_extension(Str const &input_file, Str ext);
 
 [[nodiscard]] f32 clampAngle(f32 angle);
 
-#ifdef DISCO_INCLUDE_GLM
+#ifdef BEE_INCLUDE_GLM
 [[nodiscard]] b8 fuzzyEq(Vec2 const &v1, Vec2 const &v2, f32 t = 0.01f);
 [[nodiscard]] b8 fuzzyEq(Vec3 const &v1, Vec3 const &v2, f32 t = 0.01f);
 [[nodiscard]] b8 fuzzyEq(Vec4 const &v1, Vec4 const &v2, f32 t = 0.01f);
@@ -613,7 +615,7 @@ template <typename T>
 }
 #endif
 
-} // namespace dc
+} // namespace bee
 
 
 // ############################################################################
@@ -624,14 +626,14 @@ template <typename T>
 // #                                                                          #
 // ############################################################################
 
-#ifdef DISCO_IMPLEMENTATION
+#ifdef BEE_IMPLEMENTATION
 
-#ifndef __DISCO_IMPLEMENTATION_GUARD
-#define __DISCO_IMPLEMENTATION_GUARD
+#ifndef __BEE_IMPLEMENTATION_GUARD
+#define __BEE_IMPLEMENTATION_GUARD
 
 #include <fstream>
 
-namespace dc {
+namespace bee {
 namespace fs = std::filesystem;
 
 // ==============================================
@@ -795,7 +797,7 @@ Str file_read(Str const &input_file) {
 
     if (!file.is_open()) {
         return "";
-        dc_err("Issues opening file [r]: {}", input_file);
+        bee_err("Issues opening file [r]: {}", input_file);
     }
 
     Str content;
@@ -809,7 +811,7 @@ Str file_read(Str const &input_file) {
 b8 file_write(Str const &output_file, char const *data, usize data_size, std::ios_base::openmode mode) {
     if (!data || data_size < 1) {
         return false;
-        dc_err("[file_write] Invalid data: {}", output_file);
+        bee_err("[file_write] Invalid data: {}", output_file);
     }
 
     std::ofstream file(output_file, std::ios::out | std::ios::binary | mode);
@@ -817,7 +819,7 @@ b8 file_write(Str const &output_file, char const *data, usize data_size, std::io
 
     if (!file.is_open()) {
         return false;
-        dc_err("[file_write] Opening file: {}", output_file);
+        bee_err("[file_write] Opening file: {}", output_file);
     }
 
     file.write(data, data_size);
@@ -862,7 +864,7 @@ f32 clampAngle(f32 angle) {
     return angle - 360.f * turns;
 }
 
-#ifdef DISCO_INCLUDE_GLM
+#ifdef BEE_INCLUDE_GLM
 b8 fuzzyEq(Vec2 const &v1, Vec2 const &v2, f32 t) { return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t); }
 b8 fuzzyEq(Vec3 const &v1, Vec3 const &v2, f32 t) {
     return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t) && fuzzyEq(v1.z, v2.z, t);
@@ -872,7 +874,7 @@ b8 fuzzyEq(Vec4 const &v1, Vec4 const &v2, f32 t) {
 }
 #endif
 
-} // namespace dc
+} // namespace bee
 
-#endif // __DISCO_IMPLEMENTATION_GUARD
-#endif // DISCO_IMPLEMENTATION
+#endif // __BEE_IMPLEMENTATION_GUARD
+#endif // BEE_IMPLEMENTATION

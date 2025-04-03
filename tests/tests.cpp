@@ -1,24 +1,24 @@
 
-#define DISCO_TEST_IMPLEMENTATION
-#include "../Disco/disco_test.hpp"
+#define BEE_TEST_IMPLEMENTATION
+#include "../src/bee_test.hpp"
 
-#define DISCO_BENCH_IMPLEMENTATION
-// #define DISCO_BENCH_STDOUT_ONCE
-#include "../Disco/disco_bench.hpp"
+#define BEE_BENCH_IMPLEMENTATION
+// #define BEE_BENCH_STDOUT_ONCE
+#include "../src/bee_bench.hpp"
 
-#define DISCO_IMPLEMENTATION
-#define DISCO_USE_FAKE_FMT
-// #define DISCO_INCLUDE_FMT
-// #define DISCO_CPP_INCLUDE_GLM
-#include "../Disco/disco.hpp"
+#define BEE_IMPLEMENTATION
+#define BEE_USE_FAKE_FMT
+// #define BEE_INCLUDE_FMT
+// #define BEE_CPP_INCLUDE_GLM
+#include "../src/bee.hpp"
 
 #include <iostream>
 
 
-using namespace dc::TypeAlias_GLM;
-using namespace dc::TypeAlias_Numbers;
-using namespace dc::TypeAlias_Pointers;
-using namespace dc::TypeAlias_Containers;
+using namespace bee::TypeAlias_GLM;
+using namespace bee::TypeAlias_Numbers;
+using namespace bee::TypeAlias_Pointers;
+using namespace bee::TypeAlias_Containers;
 
 
 // ############################################################################
@@ -57,21 +57,21 @@ TEST("Defer Copy", {
 // ========== Format
 
 #if defined(DISCO_INCLUDE_FMT) || defined(DISCO_USE_FAKE_FMT)
-TEST_CHECK("String Format (Str)", dc_fmt("Test {}", "String") == "Test String");
-TEST_CHECK("String Format (Int)", dc_fmt("Test {}", 42) == "Test 42");
-TEST_CHECK("String Format (Float)", dc_fmt("Test {}", 3.14159f) == "Test 3.14159");
-TEST_CHECK("String Format (Double)", dc_fmt("Test {}", 3.14159) == "Test 3.14159");
+TEST_CHECK("String Format (Str)", bee_fmt("Test {}", "String") == "Test String");
+TEST_CHECK("String Format (Int)", bee_fmt("Test {}", 42) == "Test 42");
+TEST_CHECK("String Format (Float)", bee_fmt("Test {}", 3.14159f) == "Test 3.14159");
+TEST_CHECK("String Format (Double)", bee_fmt("Test {}", 3.14159) == "Test 3.14159");
 #endif
 
 // ==============================================
 // ========== Bit operations
 
 TEST("Bit Operations", {
-    CHECK("Bit 1", dc_bit(1) == 2);
-    CHECK("Bit 2", dc_bit(2) == 4);
-    CHECK("Bit 3", dc_bit(3) == 8);
-    CHECK("Bit 4", dc_bit(4) == 16);
-    CHECK("Bit 5", dc_bit(5) == 32);
+    CHECK("Bit 1", bee_bit(1) == 2);
+    CHECK("Bit 2", bee_bit(2) == 4);
+    CHECK("Bit 3", bee_bit(3) == 8);
+    CHECK("Bit 4", bee_bit(4) == 16);
+    CHECK("Bit 5", bee_bit(5) == 32);
 });
 
 
@@ -164,7 +164,7 @@ TEST("Optional Reference", {
 
 TEST("Elapsed Timer", {
     using namespace std::chrono_literals;
-    dc::ETimer timer {};
+    bee::ETimer timer {};
     CHECK("Init Invalid 1", !timer.is_valid());
     CHECK("Init Invalid 2", timer.elapsed_ns() * timer.is_valid() == 0);
     timer.reset();
@@ -178,41 +178,40 @@ TEST("Elapsed Timer", {
 
 TEST("String Helpers", {
     Str const to_case = "test STRING to PERFORM the tests";
-    CHECK("To Lower", dc::str_lower(to_case) == "test string to perform the tests");
-    CHECK("To Upper", dc::str_upper(to_case) == "TEST STRING TO PERFORM THE TESTS");
-    CHECK("To Capital", dc::str_capital(to_case) == "Test string to perform the tests");
+    CHECK("To Lower", bee::str_lower(to_case) == "test string to perform the tests");
+    CHECK("To Upper", bee::str_upper(to_case) == "TEST STRING TO PERFORM THE TESTS");
+    CHECK("To Capital", bee::str_capital(to_case) == "Test string to perform the tests");
 
     Str const to_replace = "1,2,3,4,5";
-    CHECK("Replace All", dc::str_replace(to_replace, ",", " / ") == "1 / 2 / 3 / 4 / 5");
-    CHECK("Replace First", dc::str_replace(to_replace, ",", " / ", true) == "1 / 2,3,4,5");
+    CHECK("Replace All", bee::str_replace(to_replace, ",", " / ") == "1 / 2 / 3 / 4 / 5");
+    CHECK("Replace First", bee::str_replace(to_replace, ",", " / ", true) == "1 / 2,3,4,5");
 
     Str const to_replace_many = "1.2-3:4·5";
     Str const to_replace_many_ok = "1[1] 2[2] 3[2] 4[4] 5";
     Vec<Str> from = { "-", ".", "·", ":" };
     Vec<Str> to = { "[2] ", "[1] ", "[4] ", "[3] " };
-    CHECK("Replace Many Unsorted", dc::str_replace_many(to_replace_many, from, to) != to_replace_many_ok);
+    CHECK("Replace Many Unsorted", bee::str_replace_many(to_replace_many, from, to) != to_replace_many_ok);
     from = { ".", "-", ":", "·" };
     to = { "[1] ", "[2] ", "[3] ", "[4] " };
-    CHECK("Replace Many Sorted", dc::str_replace_many(to_replace_many, from, to, true) != to_replace_many_ok);
+    CHECK("Replace Many Sorted", bee::str_replace_many(to_replace_many, from, to, true) != to_replace_many_ok);
 
     Str const to_split = "1,2,3,4,5";
     Vec<Str> const splitted = { "1", "2", "3", "4", "5" };
-    CHECK("Split", dc::str_split(to_split, ",") == splitted);
-    CHECK("Join", dc::str_join(splitted, ",") == to_split);
+    CHECK("Split", bee::str_split(to_split, ",") == splitted);
+    CHECK("Join", bee::str_join(splitted, ",") == to_split);
 
-    dc_info("==> {}", dc::str_cut(" / a / b / c / ", 3));
-    CHECK("Cut", dc::str_cut(" / a / b / c / ", 3) == "a / b / c");
-    CHECK("Cut L", dc::str_cut_l(" / a / b / c", 3) == "a / b / c");
-    CHECK("Cut R", dc::str_cut_r("a / b / c / ", 3) == "a / b / c");
+    CHECK("Cut", bee::str_cut(" / a / b / c / ", 3) == "a / b / c");
+    CHECK("Cut L", bee::str_cut_l(" / a / b / c", 3) == "a / b / c");
+    CHECK("Cut R", bee::str_cut_r("a / b / c / ", 3) == "a / b / c");
 
-    CHECK("Contains", dc::str_contains("a / b / c / ", " b "));
+    CHECK("Contains", bee::str_contains("a / b / c / ", " b "));
 
-    CHECK("Trim", dc::str_trim(" aaa ") == "aaa");
-    CHECK("Trim L", dc::str_trim_l(" aaa ") == "aaa ");
-    CHECK("Trim R", dc::str_trim_r(" aaa ") == " aaa");
+    CHECK("Trim", bee::str_trim(" aaa ") == "aaa");
+    CHECK("Trim L", bee::str_trim_l(" aaa ") == "aaa ");
+    CHECK("Trim R", bee::str_trim_r(" aaa ") == " aaa");
 
-    // dc_info("==> {}", dc::str_trim("***aaa***", "***"));
-    // CHECK("Trim Not Space", dc::str_trim("***aaa***", "***") == "aaa");
+    // bee_info("==> {}", bee::str_trim("***aaa***", "***"));
+    // CHECK("Trim Not Space", bee::str_trim("***aaa***", "***") == "aaa");
 });
 
 
@@ -220,7 +219,7 @@ TEST("String Helpers", {
 // ========== File helpers/operations
 
 TEST("File/Bin Helpers", {
-    Str const file_content = dc::file_read("./to_file_read.txt");
+    Str const file_content = bee::file_read("./to_file_read.txt");
     Str const expected_content = "Test\nfile\nfor\nDISCO\n";
     CHECK("Read", file_content == expected_content);
 
@@ -229,20 +228,20 @@ TEST("File/Bin Helpers", {
     std::ostringstream oss;
     oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
     Str const str = oss.str();
-    CHECK("Append", dc::file_write_append("./to_file_append.txt", str + "\n"));
-    Str const append_content = dc::file_read("./to_file_append.txt");
-    Vec<Str> const append_split = dc::str_split(append_content, "\n");
+    CHECK("Append", bee::file_write_append("./to_file_append.txt", str + "\n"));
+    Str const append_content = bee::file_read("./to_file_append.txt");
+    Vec<Str> const append_split = bee::str_split(append_content, "\n");
     CHECK("Append Validation", append_split[append_split.size() - 1] == str);
 
     Vec<u8> const bin { 'T', 'e', 's', 't', '\n', 'D', 'a', 't', 'a' };
-    CHECK("Write", dc::file_write_trunc("./to_file_write.bin", recast(char const *, bin.data()), bin.size()));
-    CHECK("Write Validation", dc::fs::exists("./to_file_write.bin"));
+    CHECK("Write", bee::file_write_trunc("./to_file_write.bin", recast(char const *, bin.data()), bin.size()));
+    CHECK("Write Validation", bee::fs::exists("./to_file_write.bin"));
 
-    auto const bin_content = dc::bin_read("./to_file_write.bin");
+    auto const bin_content = bee::bin_read("./to_file_write.bin");
     Vec<u8> const magic { 'T', 'e', 's', 't' };
-    CHECK("Magic", dc::bin_check_magic(bin_content, magic));
+    CHECK("Magic", bee::bin_check_magic(bin_content, magic));
 
-    CHECK("Extension", dc::file_check_extension("./to_file_write.bin", "BiN"));
+    CHECK("Extension", bee::file_check_extension("./to_file_write.bin", "BiN"));
 });
 
 
@@ -267,15 +266,15 @@ inline int32_t BENCH_COUNT = 5;
 BENCH("StdCout", BENCH_COUNT, {
     std::cout << std::boolalpha << "[INFO] | " << __FILE__ << ":" << __LINE__ //
               << " | " << "2 elevated to " << 1 << " is "                     //
-              << dc_bit(1) << " == " << true << "\n";
+              << bee_bit(1) << " == " << true << "\n";
 });
 
 #if defined(DISCO_USE_FAKE_FMT)
-BENCH("DISCO Info (fakefmt)", BENCH_COUNT, dc_info("2 elevated to {} is {} == {}", 1, dc_bit(1), true));
+BENCH("DISCO Info (fakefmt)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1), true));
 #elif defined(DISCO_INCLUDE_FMT)
-BENCH("DISCO Info (fmtlib)", BENCH_COUNT, dc_info("2 elevated to {} is {} == {}", 1, dc_bit(1), true));
+BENCH("DISCO Info (fmtlib)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1), true));
 #else
-BENCH("DISCO Info (apped)", BENCH_COUNT, dc_info("2 elevated to {} is {} == {}", 1, dc_bit(1), true));
+BENCH("DISCO Info (apped)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1), true));
 #endif
 
 
@@ -283,18 +282,18 @@ BENCH("DISCO Info (apped)", BENCH_COUNT, dc_info("2 elevated to {} is {} == {}",
 // ========== String replacement
 
 BENCH("Str Replace Many Unsorted", BENCH_COUNT,
-      Str s = dc::str_replace_many("1.2-3:4·5", Vec<Str> { "-", ".", "·", ":" },
-                                   Vec<Str> { "[2] ", "[1] ", "[4] ", "[3] " }));
+      Str s = bee::str_replace_many("1.2-3:4·5", Vec<Str> { "-", ".", "·", ":" },
+                                    Vec<Str> { "[2] ", "[1] ", "[4] ", "[3] " }));
 BENCH("Str Replace Many Sorted", BENCH_COUNT,
-      Str s = dc::str_replace_many("1.2-3:4·5", Vec<Str> { ".", "-", ":", "·" },
-                                   Vec<Str> { "[1] ", "[2] ", "[3] ", "[4] " }));
+      Str s = bee::str_replace_many("1.2-3:4·5", Vec<Str> { ".", "-", ":", "·" },
+                                    Vec<Str> { "[1] ", "[2] ", "[3] ", "[4] " }));
 
 
 // ==============================================
 // ========== Glm stuff
 
 #ifdef DISCO_INCLUDE_GLM
-BENCH("dc_info_glm_vec3", 5, dc_info("glm vec3 {}", glmstr(Vec3(2.f))));
+BENCH("bee_info_glm_vec3", 5, bee_info("glm vec3 {}", glmstr(Vec3(2.f))));
 #endif
 
 
@@ -307,7 +306,7 @@ BENCH("dc_info_glm_vec3", 5, dc_info("glm vec3 {}", glmstr(Vec3(2.f))));
 // ############################################################################
 
 int main() {
-    dc::test::run();
-    dc_print("{}", "");
-    dc::bench::run();
+    bee::test::run();
+    bee_print("{}", "");
+    bee::bench::run();
 }

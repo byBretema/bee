@@ -1,6 +1,6 @@
 #pragma once
 
-/* disco_test - v0.01
+/* bee_test - v0.01
 
     Nano framework for testing
 
@@ -12,15 +12,15 @@
 
     -- Classic header-only stuff, add this:
 
-    #define DISCO_TEST_IMPLEMENTATION
+    #define BEE_TEST_IMPLEMENTATION
 
     -- Before you include this file in *one* C++ file to create the
     implementation, something like this:
 
     #include ...
     #include ...
-    #define DISCO_TEST_IMPLEMENTATION
-    #include "disco_test.hpp"
+    #define BEE_TEST_IMPLEMENTATION
+    #include "bee_test.hpp"
 
 */
 
@@ -48,7 +48,7 @@
 // #                                                                          #
 // ############################################################################
 
-namespace dc::test {
+namespace bee::test {
 
 namespace detail {
 
@@ -76,7 +76,7 @@ void add(Test const &test);
 
 void run();
 
-} // namespace dc::test
+} // namespace bee::test
 
 
 // ############################################################################
@@ -87,10 +87,10 @@ void run();
 // #                                                                          #
 // ############################################################################
 
-#ifndef DISCO_CONCAT
-#define __DISCO_CONCAT2(l, r) l##r
-#define __DISCO_CONCAT1(l, r) __DISCO_CONCAT2(l, r)
-#define DISCO_CONCAT(l, r) __DISCO_CONCAT1(l, r)
+#ifndef BEE_CONCAT
+#define __BEE_CONCAT2(l, r) l##r
+#define __BEE_CONCAT1(l, r) __BEE_CONCAT2(l, r)
+#define BEE_CONCAT(l, r) __BEE_CONCAT1(l, r)
 #endif
 
 
@@ -103,14 +103,14 @@ void run();
 // ############################################################################
 
 #define TEST(name, ...)                                                                                                \
-    static inline int DISCO_CONCAT(test_case__, __LINE__) = [] {                                                       \
-        dc::test::detail::Test test { name };                                                                          \
+    static inline int BEE_CONCAT(test_case__, __LINE__) = [] {                                                         \
+        bee::test::detail::Test test { name };                                                                         \
         test.fn = []() {                                                                                               \
-            dc::test::detail::Result result;                                                                           \
+            bee::test::detail::Result result;                                                                          \
             __VA_ARGS__;                                                                                               \
             return result;                                                                                             \
         };                                                                                                             \
-        dc::test::detail::add(test);                                                                                   \
+        bee::test::detail::add(test);                                                                                  \
         return 0;                                                                                                      \
     }();
 
@@ -135,20 +135,20 @@ void run();
 // #                                                                          #
 // ############################################################################
 
-#ifdef DISCO_TEST_IMPLEMENTATION
+#ifdef BEE_TEST_IMPLEMENTATION
 
-#ifndef __DISCO_TEST_IMPLEMENTATION_GUARD
-#define __DISCO_TEST_IMPLEMENTATION_GUARD
+#ifndef __BEE_TEST_IMPLEMENTATION_GUARD
+#define __BEE_TEST_IMPLEMENTATION_GUARD
 
 #ifdef _WIN32
 #include <windows.h>
-static const int ___DISCO_TEST_COUT_SETUP = []() {
+static const int ___BEE_TEST_COUT_SETUP = []() {
     SetConsoleOutputCP(CP_UTF8);
     return 0;
 }();
 #endif
 
-namespace dc::test {
+namespace bee::test {
 
 // ==============================================
 // ========== Internal helpers
@@ -207,7 +207,7 @@ void run() {
     std::cout << "❌ Fail  -> " << fail_count << "\n";
 }
 
-} // namespace dc::test
+} // namespace bee::test
 
-#endif // __DISCO_TEST_IMPLEMENTATION_GUARD
-#endif // DISCO_TEST_IMPLEMENTATION
+#endif // __BEE_TEST_IMPLEMENTATION_GUARD
+#endif // BEE_TEST_IMPLEMENTATION

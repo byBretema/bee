@@ -1,20 +1,20 @@
-# 🪩 Disco
-> An opinionated set of tools for saner C++ 20>
+# 🐝 Bee
+> An opinionated set of tools for saner C++20
 
 ## Content
 
-- disco.hpp
+- bee.hpp
     - Defer
     - STL Aliases
     - Helper macros
     - Helper functions
     - Naïve fmt-like print
 
-- disco_test.hpp
-    - Just a tiny test framework
+- bee_test.hpp
+    - A nano framework for: test
 
-- disco_bench.hpp
-    - Just a tiny benchmark framework
+- bee_bench.hpp
+    - A nano framework for: benchmark
 
 
 ## Deps
