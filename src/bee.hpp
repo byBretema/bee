@@ -199,7 +199,7 @@ private:
 // ==============================================
 // ========== Fmt lib or not
 
-#ifdef BEE_INCLUDE_FMT //  <-- Use fmtlib
+#ifdef BEE_INCLUDE_FMT //  <-- Using fmtlib
 #undef BEE_USE_FAKE_FMT
 // String Builder
 #define bee_fmt(msg, ...) fmt::format(msg, __VA_ARGS__)
@@ -208,7 +208,7 @@ private:
     fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, bee_fmt(msg, __VA_ARGS__))
 #define __BEE_LOG_FLAT(msg, ...) fmt::println("{}", bee_fmt(msg, __VA_ARGS__))
 
-#else //  <-- Do not use fmtlib (rely on std::cout)
+#else //  <-- Not using fmtlib (rely on std::cout)
 #warning "[bee] :: Using fmt-lib will improve experience (and performance) of bee_fmt/info/err/.. methods a lot."
 
 #include <iostream>
@@ -442,7 +442,6 @@ using namespace TypeAlias_Pointers;
 // ========== Containers Aliases
 
 namespace TypeAlias_Containers {
-// <type>_ : Read Only (aka: const &)
 
 // Unordered Map
 template <typename K, typename V>
@@ -600,17 +599,17 @@ b8 file_check_extension(Str const &input_file, Str ext);
 [[nodiscard]] f32 map(f32 value, f32 srcMin, f32 srcMax, f32 dstMin, f32 dstMax);
 [[nodiscard]] f32 map_100(f32 value, f32 dstMin, f32 dstMax);
 
-[[nodiscard]] b8 fuzzyEq(f32 f1, f32 f2, f32 threshold = 0.01f);
+[[nodiscard]] b8 fuzzy_eq(f32 f1, f32 f2, f32 threshold = 0.01f);
 
-[[nodiscard]] f32 clampAngle(f32 angle);
+[[nodiscard]] f32 clamp_angle(f32 angle);
 
 #ifdef BEE_INCLUDE_GLM
-[[nodiscard]] b8 fuzzyEq(Vec2 const &v1, Vec2 const &v2, f32 t = 0.01f);
-[[nodiscard]] b8 fuzzyEq(Vec3 const &v1, Vec3 const &v2, f32 t = 0.01f);
-[[nodiscard]] b8 fuzzyEq(Vec4 const &v1, Vec4 const &v2, f32 t = 0.01f);
+[[nodiscard]] b8 fuzzy_eq(Vec2 const &v1, Vec2 const &v2, f32 t = 0.01f);
+[[nodiscard]] b8 fuzzy_eq(Vec3 const &v1, Vec3 const &v2, f32 t = 0.01f);
+[[nodiscard]] b8 fuzzy_eq(Vec4 const &v1, Vec4 const &v2, f32 t = 0.01f);
 
 template <typename T>
-[[nodiscard]] inline b8 isAligned(T const &a, T const &b, f32 margin = 0.f) {
+[[nodiscard]] inline b8 is_aligned(T const &a, T const &b, f32 margin = 0.f) {
     return abs(glm::dot(glm::normalize(a), glm::normalize(b))) >= (1.f - f32_epsilon - margin);
 }
 #endif
@@ -854,23 +853,25 @@ f32 map(f32 value, f32 srcMin, f32 srcMax, f32 dstMin, f32 dstMax) {
     return dstMin + (dstMax - dstMin) * (value - srcMin) / (srcMax - srcMin);
 }
 f32 map_100(f32 value, f32 dstMin, f32 dstMax) { return map(value, 0, 100, dstMin, dstMax); }
-b8 fuzzyEq(f32 f1, f32 f2, f32 threshold) {
+
+b8 fuzzy_eq(f32 f1, f32 f2, f32 threshold) {
     auto const diff = abs(f1 - f2);
     auto const isEq = diff <= threshold;
     return isEq;
 }
-f32 clampAngle(f32 angle) {
+
+f32 clamp_angle(f32 angle) {
     auto const turns = floorf(angle / 360.f);
     return angle - 360.f * turns;
 }
 
 #ifdef BEE_INCLUDE_GLM
-b8 fuzzyEq(Vec2 const &v1, Vec2 const &v2, f32 t) { return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t); }
-b8 fuzzyEq(Vec3 const &v1, Vec3 const &v2, f32 t) {
-    return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t) && fuzzyEq(v1.z, v2.z, t);
+b8 fuzzy_eq(Vec2 const &v1, Vec2 const &v2, f32 t) { return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t); }
+b8 fuzzy_eq(Vec3 const &v1, Vec3 const &v2, f32 t) {
+    return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t) && fuzzy_eq(v1.z, v2.z, t);
 }
-b8 fuzzyEq(Vec4 const &v1, Vec4 const &v2, f32 t) {
-    return fuzzyEq(v1.x, v2.x, t) && fuzzyEq(v1.y, v2.y, t) && fuzzyEq(v1.z, v2.z, t) && fuzzyEq(v1.w, v2.w, t);
+b8 fuzzy_eq(Vec4 const &v1, Vec4 const &v2, f32 t) {
+    return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t) && fuzzy_eq(v1.z, v2.z, t) && fuzzy_eq(v1.w, v2.w, t);
 }
 #endif
 
