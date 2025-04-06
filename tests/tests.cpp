@@ -56,7 +56,7 @@ TEST("Defer Copy", {
 // ==============================================
 // ========== Format
 
-#if defined(DISCO_INCLUDE_FMT) || defined(DISCO_USE_FAKE_FMT)
+#if defined(BEE_INCLUDE_FMT) || defined(BEE_USE_FAKE_FMT)
 TEST_CHECK("String Format (Str)", bee_fmt("Test {}", "String") == "Test String");
 TEST_CHECK("String Format (Int)", bee_fmt("Test {}", 42) == "Test 42");
 TEST_CHECK("String Format (Float)", bee_fmt("Test {}", 3.14159f) == "Test 3.14159");
@@ -220,7 +220,7 @@ TEST("String Helpers", {
 
 TEST("File/Bin Helpers", {
     Str const file_content = bee::file_read("./to_file_read.txt");
-    Str const expected_content = "Test\nfile\nfor\nDISCO\n";
+    Str const expected_content = "Test\nfile\nfor\nBEE\n";
     CHECK("Read", file_content == expected_content);
 
     auto const t = std::time(nullptr);
@@ -269,12 +269,12 @@ BENCH("StdCout", BENCH_COUNT, {
               << bee_bit(1) << " == " << true << "\n";
 });
 
-#if defined(DISCO_USE_FAKE_FMT)
-BENCH("DISCO Info (fakefmt)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1), true));
-#elif defined(DISCO_INCLUDE_FMT)
-BENCH("DISCO Info (fmtlib)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1), true));
+#if defined(BEE_USE_FAKE_FMT)
+BENCH("Info (fakefmt)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1), true));
+#elif defined(BEE_INCLUDE_FMT)
+BENCH("Info (fmtlib)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1), true));
 #else
-BENCH("DISCO Info (apped)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1), true));
+BENCH("Info (apped)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1), true));
 #endif
 
 
@@ -292,7 +292,7 @@ BENCH("Str Replace Many Sorted", BENCH_COUNT,
 // ==============================================
 // ========== Glm stuff
 
-#ifdef DISCO_INCLUDE_GLM
+#ifdef BEE_INCLUDE_GLM
 BENCH("bee_info_glm_vec3", 5, bee_info("glm vec3 {}", glmstr(Vec3(2.f))));
 #endif
 
