@@ -29,15 +29,23 @@
     ! Define-Based options:
     =============================================
 
-    -- If you use fmt-lib, 'bee' will include basic fmt header files and
+    -- If you use fmt-lib, 'bee' will include basic fmt header file(s) and
     expose, basic log methods: bee_info/warn/err/debug("", ...),
     this will also undefine 'BEE_USE_FAKE_FMT'
 
     #define BEE_INCLUDE_FMT
 
+
+    -- If you use argparse, 'bee' will include argparse header file(s) and
+    expose some wrapper methods under bee::cli_xxx, namespace
+
+    #define BEE_INCLUDE_ARGPARSE
+
+
     -- If you use glm-lib, 'bee' will include basic glm header files
 
     #define BEE_INCLUDE_GLM
+
 
     -- Use a naïve fmt-like custom implemenation (will be disabled if
     'BEE_INCLUDE_FMT' is present)
@@ -89,6 +97,14 @@
 #else
 #define TCB_SPAN_NAMESPACE_NAME std
 #include "tcb_span.hpp"
+#endif
+
+// ==============================================
+// ========== ARGS (argparse)
+
+#ifdef BEE_INCLUDE_ARGPARSE
+//! https://github.com/p-ranav/argparse?tab=readme-ov-file#table-of-contents
+#include <argparse/argparse.hpp>
 #endif
 
 // ==============================================
@@ -506,7 +522,6 @@ namespace TypeAlias_GLM {} // namespace TypeAlias_GLM
 #endif
 using namespace TypeAlias_GLM;
 
-
 // ==============================================
 // ========== Time Consts
 
@@ -525,6 +540,16 @@ inline constexpr f64 us_to_ns = 1e+3;
 inline constexpr f64 ns_to_s = 1e-9;
 inline constexpr f64 ns_to_ms = 1e-6;
 inline constexpr f64 ns_to_us = 1e-3;
+
+
+// ==============================================
+// ========== ARGS (argparse) Wrappers
+
+#ifdef BEE_INCLUDE_ARGPARSE
+using CLI = argparse::ArgumentParser;
+[[nodiscard]] CLI &cli_init(Str const &title, Str const &version, Str const &description);
+[[nodiscard]] bool cli_parse(CLI &cli, int argc, char *argv[]);
+#endif
 
 
 // ==============================================
@@ -634,6 +659,32 @@ template <typename T>
 
 namespace bee {
 namespace fs = std::filesystem;
+
+
+// ==============================================
+// ========== ARGS (argparse) Wrappers
+
+#ifdef BEE_INCLUDE_ARGPARSE
+CLI &cli_init(Str const &title, Str const &version, Str const &description) {
+    static auto cli = [] -> CLI & {
+        CLI c { title, version };
+        c.add_description(description);
+        return c;
+    }();
+    return cli;
+}
+bool cli_parse(CLI &cli, int argc, char *argv[]) {
+    try {
+        cli.parse_args(argc, argv);
+        return true;
+    } catch (const std::exception &err) {
+        fmt::println("{}", err.what());
+        fmt::println("{}", cli.help().str());
+        return false;
+    }
+}
+#endif
+
 
 // ==============================================
 // ========== Elapsed Timer

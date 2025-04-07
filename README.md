@@ -17,12 +17,20 @@
     - A nano framework for: benchmark
 
 
+## Integrated Libs  (not required)
+
+- fmt
+- glm
+- argparse
+
 ## Deps
 
 **None** 🥳
 
-- If you are using a version lower than C++20, please copy [`tcb_span.hpp`](https://github.com/tcbrindle/span/blob/master/include/tcb/span.hpp) at the same level than `bee.hpp`, otherwise you can ignore that file
+```plain-text
+    - If you are using a version lower than C++20...
+      Please copy tcb_span.hpp at the same level than `bee.hpp`,
+      Otherwise you can safely ignore that file.
+Credits to: https://github.com/tcbrindle/span/blob/master/include/tcb/span.hpp
 
-- fmtlib is integrated but not required
-
-- glm lib is integrated but not required
+```
