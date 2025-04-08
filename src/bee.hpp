@@ -669,7 +669,10 @@ namespace fs = std::filesystem;
 #ifdef BEE_INCLUDE_ARGPARSE
 CLI &cli_init(Str const &title, Str const &version, Str const &description) {
     static CLI cli { title, version };
-    cli.add_description(description);
+    static auto once = [&description] {
+        cli.add_description(description);
+        return 0;
+    }();
     return cli;
 }
 bool cli_parse(CLI &cli, int argc, char *argv[]) {
