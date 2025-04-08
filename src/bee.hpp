@@ -1,6 +1,6 @@
 #pragma once
 
-/* bee - v0.01
+/* bee - v0.0.1
 
     An alternative take on cpp.
     Basically some aliases and helpers.
@@ -8,6 +8,8 @@
     Also a bunch of code that I found myself repeating between projects.
 
     No warranty implied, use at your own risk.
+
+    Original Repository ->  https://github.com/byBretema/bee
 
     =============================================
     ! How to include
