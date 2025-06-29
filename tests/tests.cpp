@@ -130,14 +130,14 @@ TEST("Numeric Aliases", {
 
 TEST("TypeAlias Pointers", {
     struct A {
-        i32 i = 0;
+        Str s = "A";
         f32 f = 0.f;
     };
-    auto const a = A { 42, 3.14159f };
-    Uptr<A> ua = Unew<A>(42, 3.14159f);
-    CHECK("Uptr", a.i == ua->i && a.f == ua->f);
-    Sptr<A> sa = Snew<A>(42, 3.14159f);
-    CHECK("Sptr", a.i == sa->i && a.f == sa->f);
+    auto const a = A { "A", 3.14159f };
+    Uptr<A> ua = Unew<A>("A", 3.14159f);
+    CHECK("Uptr", a.s == ua->s && a.f == ua->f);
+    Sptr<A> sa = Snew<A>("A", 3.14159f);
+    CHECK("Sptr", a.s == sa->s && a.f == sa->f);
 });
 
 

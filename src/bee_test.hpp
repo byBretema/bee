@@ -107,7 +107,9 @@ void run();
         bee::test::detail::Test test { name };                                                                         \
         test.fn = []() {                                                                                               \
             bee::test::detail::Result result;                                                                          \
-            __VA_ARGS__;                                                                                               \
+            {                                                                                                          \
+                __VA_ARGS__;                                                                                           \
+            }                                                                                                          \
             return result;                                                                                             \
         };                                                                                                             \
         bee::test::detail::add(test);                                                                                  \
