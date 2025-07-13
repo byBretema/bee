@@ -3,7 +3,7 @@
 #include "../src/bee_test.hpp"
 
 #define BEE_BENCH_IMPLEMENTATION
-// #define BEE_BENCH_STDOUT_ONCE
+#define BEE_BENCH_STDOUT_ONCE
 #include "../src/bee_bench.hpp"
 
 #define BEE_IMPLEMENTATION
