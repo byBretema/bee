@@ -1,41 +1,36 @@
-/* bee - v0.0.1
+/* y - v0.0.1
 
-    Basically some aliases and helpers,
-    plus a bunch of code repeated between projects.
+    Some C++ aliases, helpers and wrappers repeated along different projects.
 
-    Use below define before including bee.hpp:
+    #define yyDEFINITION
+        Type this before including y.h:
 
-        #define BEE_IMPLEMENTATION
+    #define yyExposeAliases
+        Expose aliases defined in 'y' namespace :
+        i32, f32, Vec, Arr, Str, Sptr, Uptr, Vec2, Vec3, ...
 
-    OPTIONS:
+    #define yyUseLibFmt
+        Include basic fmt header file(s) and expose, basic log methods:
+        yInfo/Warn/Err/Debug. This will undefine 'yyUseCustomFmt'
 
-        -- Expose all the aliases defined by the 'bee' library
-        (i32, f32, Vec, Arr, Str, Sptr, Uptr, Vec2, Vec3, ...)
+    #define yyUseLibArgparse
+        Include argparse header file(s) and expose y::cli_xxx methods
 
-            #define BEE_EXPOSE_ALIASES
+    #define yyUseLibGlm
+        Include basic glm header files
 
-        -- If you use fmt-lib, 'bee' will include basic fmt header file(s) and
-        expose, basic log methods: bee_info/warn/err/debug("", ...),
-        this will also undefine 'BEE_USE_FAKE_FMT'
+    #define yyUseCustomFmt
+        Include simplistic fmt-like custom implementation.
+        It could be undefined by 'yyUseLibFmt'
 
-            #define BEE_INCLUDE_FMT
-
-        -- If you use argparse, 'bee' will include argparse header file(s) and
-        expose some wrapper methods under bee::cli_xxx, namespace
-
-            #define BEE_INCLUDE_ARGPARSE
-
-        -- If you use glm-lib, 'bee' will include basic glm header files
-
-            #define BEE_INCLUDE_GLM
-
-        -- To use a simplistic fmt-like custom implementation.
-        It will be disabled if 'BEE_INCLUDE_FMT' is present.
-
-            #define BEE_USE_FAKE_FMT
+    Used conventions:
+    - camelCase  : Macros             : start with 'y'
+    - camelCase  : Defines            : start with 'yy'
+    - PascalCase : Types + Namespaces : Inside 'y' namespace
+    - snake_case : Vars  + Funcs      : Inside 'y' namespace
+    - m_ prefix  : Private vars
+    - s_ prefix  : Static  vars
 */
-
-
 // Copyright Daniel Brétema, 2025.
 // Distributed under the Boost Software License, Version 1.0.
 // See complete details at https://www.boost.org/LICENSE_1_0.txt
@@ -43,8 +38,8 @@
 
 // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-#ifndef BEE_HEADER
-#define BEE_HEADER
+#ifndef _guard_y_header
+#define _guard_y_header
 
 //=============================================================================
 //= INCLUDES
@@ -52,29 +47,24 @@
 
 //--- STD ---------------------------------------------------------------------
 
+#include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <filesystem>
+#include <functional>
+#include <iso646.h>
 #include <limits>
-
-#include <array>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
-#include <thread>
-
-#include <algorithm>
-#include <functional>
-#include <memory>
-
-#include <filesystem>
-
-#include <iso646.h>
 
 //--- SPAN --------------------------------------------------------------------
 
@@ -87,14 +77,14 @@
 
 //--- ARGs --------------------------------------------------------------------
 
-#ifdef BEE_INCLUDE_ARGPARSE
+#ifdef yyUseLibArgparse
 //! https://github.com/p-ranav/argparse?tab=readme-ov-file#table-of-contents
 #include <argparse/argparse.hpp>
 #endif
 
 //--- FMT ---------------------------------------------------------------------
 
-#ifdef BEE_INCLUDE_FMT
+#ifdef yyUseLibFmt
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -103,7 +93,7 @@
 
 //--- GLM ---------------------------------------------------------------------
 
-#ifdef BEE_INCLUDE_GLM
+#ifdef yyUseLibGlm
 // #define GLM_FORCE_SSE
 // #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #define GLM_ENABLE_EXPERIMENTAL
@@ -126,52 +116,22 @@
 #define glmstr(x) glm::to_string(x)
 #endif
 
-
-// //=============================================================================
-// //= CONCAT
-// //=============================================================================
-
-// #ifndef __BEE_CONCAT
-// #define __BEE_CONCAT2(l, r) l##r
-// #define __BEE_CONCAT1(l, r) __BEE_CONCAT2(l, r)
-// #define __BEE_CONCAT(l, r) __BEE_CONCAT1(l, r)
-// #endif
-
-// //=============================================================================
-// //= DEFER
-// //=============================================================================
-
-// #define bee_defer(fn) const auto __BEE_CONCAT(defer__, __LINE__) = bee::details::Defer(fn)
-
-// #ifndef defer
-// #define defer(fn) bee_defer([&]() { fn; })
-// #else
-// #warning "[bee] :: 'defer' is already defined using it might end in a missbehave"
-// #endif
-
-// #ifndef deferc
-// #define deferc(fn) bee_defer([=]() { fn; })
-// #else
-// #warning "[bee] :: 'deferc' is already defined using it might end in a missbehave"
-// #endif
-
-
 //=============================================================================
 //= FORMAT and PRINT
 //=============================================================================
 
-#ifdef BEE_INCLUDE_FMT //!! Using fmtlib
-#undef BEE_USE_FAKE_FMT
+#ifdef yyUseLibFmt //!! Using fmtlib
+#undef yyUseCustomFmt
 
 //--- String Builder ----------------------------------------------------------
 
-#define bee_fmt(msg, ...) fmt::format(msg, __VA_ARGS__)
+#define yFmt(msg, ...) fmt::format(msg, __VA_ARGS__)
 
 //--- Log Builder -------------------------------------------------------------
 
-#define __BEE_LOG(level, msg, ...)                                                                                     \
-    fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, bee_fmt(msg, __VA_ARGS__))
-#define __BEE_LOG_FLAT(msg, ...) fmt::println("{}", bee_fmt(msg, __VA_ARGS__))
+#define yLog(level, msg, ...) fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, yFmt(msg, __VA_ARGS__))
+#define yPrintln(msg, ...) fmt::println("{}", yFmt(msg, __VA_ARGS__))
+#define yPrint(msg, ...) fmt::print("{}", yFmt(msg, __VA_ARGS__))
 
 #else //!! Not using fmtlib (rely on std::cout)
 
@@ -180,7 +140,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
-static const int ___BEE_COUT_SETUP = []() {
+static const int ___Y_COUT_SETUP = []() {
     SetConsoleOutputCP(CP_UTF8);
     return 0;
 }();
@@ -189,11 +149,11 @@ static const int ___BEE_COUT_SETUP = []() {
 //--- String Builder ----------------------------------------------------------
 
 template <typename... Args>
-std::string bee_fmt(std::string_view msg, Args... args) {
+std::string yFmt(std::string_view msg, Args... args) {
     std::ostringstream oss;
     oss << std::boolalpha;
 
-    static auto const fmt = [](std::ostringstream &oss, std::string_view &msg, auto &&arg_value) {
+    static auto const fmt = [](std::ostringstream &oss, std::string_view &msg, auto &&arg) {
         size_t const curly_l = msg.find('{');
         if (curly_l == std::string::npos) {
             return;
@@ -204,7 +164,7 @@ std::string bee_fmt(std::string_view msg, Args... args) {
         }
 
         oss << msg.substr(0, curly_l);
-        oss << std::forward<decltype(arg_value)>(arg_value);
+        oss << std::forward<decltype(arg)>(arg);
 
         msg = msg.substr(curly_r + 1);
     };
@@ -218,75 +178,71 @@ std::string bee_fmt(std::string_view msg, Args... args) {
 
 //--- Log Builder -------------------------------------------------------------
 
-#define __BEE_LOG(level, msg, ...)                                                                                     \
-    std::cout << "[" << level << "] | " << __FILE__ << ":" << __LINE__ << " | " << bee_fmt(msg, __VA_ARGS__) << "\n"
-#define __BEE_LOG_FLAT(msg, ...) std::cout << bee_fmt(msg, __VA_ARGS__) << "\n"
+#define yLog(level, msg, ...)                                                                                          \
+    std::cout << "[" << level << "] | " << __FILE__ << ":" << __LINE__ << " | " << yFmt(msg, __VA_ARGS__) << "\n"
+#define yPrintln(msg, ...) std::cout << yFmt(msg, __VA_ARGS__) << "\n"
+#define yPrint(msg, ...) std::cout << yFmt(msg, __VA_ARGS__);
 #endif
 
 //--- Actual print API --------------------------------------------------------
 
-#define bee_print(msg, ...) __BEE_LOG_FLAT(msg, __VA_ARGS__)
-#define bee_info(msg, ...) __BEE_LOG("INFO", msg, __VA_ARGS__)
-#define bee_warn(msg, ...) __BEE_LOG("WARN", msg, __VA_ARGS__)
-#define bee_err(msg, ...) __BEE_LOG("ERRO", msg, __VA_ARGS__)
-#define bee_debug(msg, ...) __BEE_LOG("DEBG", msg, __VA_ARGS__)
+#define yInfo(msg, ...) yLog("INFO", msg, __VA_ARGS__)
+#define yWarn(msg, ...) yLog("WARN", msg, __VA_ARGS__)
+#define yErr(msg, ...) yLog("ERRO", msg, __VA_ARGS__)
+#define yDbg(msg, ...) yLog("DEBG", msg, __VA_ARGS__)
 
 
 //=============================================================================
 //= OTHER MACROS
 //=============================================================================
 
-// //--- Misc --------------------------------------------------------------------
-
-// #define bee_bind(fn)                                                                                                   \
-//     [this](auto &&...args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
-// #define bee_bit(x) (1 << x)
-
 //--- Class helpers -----------------------------------------------------------
 
-#define bee_nocopy(T)                                                                                                  \
+#define yNoCopy(T)                                                                                                     \
 public:                                                                                                                \
     T(T const &) = delete;                                                                                             \
     T &operator=(T const &) = delete;
 
-#define bee_nomove(T)                                                                                                  \
+#define yNoMove(T)                                                                                                     \
 public:                                                                                                                \
     T(T &&) noexcept = delete;                                                                                         \
     T &operator=(T &&) noexcept = delete;
 
-#define bee_nocopy_nomove(T) bee_nocopy(T) bee_nomove(T)
-
-// //--- Cast helpers ------------------------------------------------------------
-
-// #ifndef as
-// #define as(T, x) ((T)(x))
-// #else
-// #warning "[bee] :: 'as' is already defined using it might end in a missbehave"
-// #endif
+#define yNoCopyNoMove(T) yNoCopy(T) yNoMove(T)
 
 
 //=============================================================================
 //= NAMESPACE
 //=============================================================================
 
-namespace bee {
+namespace y {
 
 //--- Defer -------------------------------------------------------------------
 
 template <typename T>
-class Defer {
-public:
+struct Defer {
     Defer() = delete;
-    Defer(T cb) : cb(cb) {}
-    ~Defer() { cb(); }
+    yNoCopyNoMove(Defer);
+    // Defer(Defer const &) = delete;
+    // Defer &operator=(Defer const &) = delete;
+    // Defer(Defer &&) noexcept = delete;
+    // Defer &operator=(Defer &&) noexcept = delete;
+    Defer(T &&cb) : m_cb(std::forward<T>(cb)) {}
+    ~Defer() { m_cb(); }
+
 private:
-    const T cb;
+    const T m_cb;
 };
+
+template <typename F, typename T>
+auto bind(F &&fn, T *obj) {
+    return [obj, fn](auto &&...args) -> decltype(auto) { return (obj->*fn)(std::forward<decltype(args)>(args)...); };
+}
 
 //--- Numbers Aliases ---------------------------------------------------------
 
 
-namespace TypeAlias_Numbers {
+namespace TypeAliasNumbers {
 
 // Bool
 
@@ -342,39 +298,37 @@ inline constexpr f64 f64_min = std::numeric_limits<f64>::min();
 inline constexpr f64 f64_max = std::numeric_limits<f64>::max();
 inline constexpr f64 f64_epsilon = std::numeric_limits<f64>::epsilon();
 
-} // namespace TypeAlias_Numbers
-using namespace TypeAlias_Numbers;
+} // namespace TypeAliasNumbers
+using namespace TypeAliasNumbers;
 
 
 //--- Pointers Aliases --------------------------------------------------------
 
-namespace TypeAlias_Pointers {
+namespace TypeAliasPointers {
 
-// Unique pointer
+// Unique pointer -- Do not use make_unique, it ignores custom-allocators
 template <typename T>
-using Uptr = std::unique_ptr<T>;
+using Box = std::unique_ptr<T>;
 template <typename T, typename... Args>
-[[nodiscard]] constexpr Uptr<T> Unew(Args &&...args) {
-    // return std::make_unique<T>(std::forward<Args>(args)...); // > C++20
-    return Uptr<T>(new T { args... }); // < C++20
+[[nodiscard]] constexpr Box<T> box_make(Args &&...args) {
+    return Box<T>(new T { args... });
 }
 
-// Shared pointer
+// Shared pointer -- Do not use make_shared, it ignores custom-allocators
 template <typename T>
-using Sptr = std::shared_ptr<T>;
+using Arc = std::shared_ptr<T>;
 template <typename T, typename... Args>
-[[nodiscard]] constexpr Sptr<T> Snew(Args &&...args) {
-    // return std::make_shared<T>(std::forward<Args>(args)...); // > C++20
-    return Sptr<T>(new T { args... }); // < C++20
+[[nodiscard]] constexpr Arc<T> arc_make(Args &&...args) {
+    return Arc<T>(new T { args... });
 }
 
-} // namespace TypeAlias_Pointers
-using namespace TypeAlias_Pointers;
+} // namespace TypeAliasPointers
+using namespace TypeAliasPointers;
 
 
 //--- Containers Aliases --------------------------------------------------------
 
-namespace TypeAlias_Containers {
+namespace TypeAliasContainers {
 
 // Unordered Map
 template <typename K, typename V>
@@ -419,24 +373,23 @@ using Span = std::span<T>;
 template <typename T>
 using SpanConst = std::span<const T>;
 
-} // namespace TypeAlias_Containers
-using namespace TypeAlias_Containers;
+} // namespace TypeAliasContainers
+using namespace TypeAliasContainers;
 
 
 //--- GLM Aliases -------------------------------------------------------------
 
-#ifdef BEE_INCLUDE_GLM
-
-namespace TypeAlias_GLM {
+#ifdef yyUseLibGlm
+namespace TypeAliasGLM {
 using Vec2 = glm::vec2;
 using Vec3 = glm::vec3;
 using Vec4 = glm::vec4;
 using Mat4 = glm::mat4;
-} // namespace TypeAlias_GLM
+} // namespace TypeAliasGLM
 #else
-namespace TypeAlias_GLM {} // namespace TypeAlias_GLM
+namespace TypeAliasGLM {} // namespace TypeAliasGLM
 #endif
-using namespace TypeAlias_GLM;
+using namespace TypeAliasGLM;
 
 //--- Time Consts -------------------------------------------------------------
 
@@ -459,7 +412,7 @@ inline constexpr f64 ns_to_us = 1e-3;
 
 //--- Argparse ----------------------------------------------------------------
 
-#ifdef BEE_INCLUDE_ARGPARSE
+#ifdef yyUseLibArgparse
 using CLI = argparse::ArgumentParser;
 [[nodiscard]] CLI &cli_init(Str const &title, Str const &version, Str const &description);
 [[nodiscard]] bool cli_parse(CLI &cli, int argc, char *argv[]);
@@ -537,7 +490,7 @@ b8 file_check_extension(Str const &input_file, Str ext);
 
 [[nodiscard]] f32 clamp_angle(f32 angle);
 
-#ifdef BEE_INCLUDE_GLM
+#ifdef yyUseLibGlm
 [[nodiscard]] b8 fuzzy_eq(Vec2 const &v1, Vec2 const &v2, f32 t = 0.01f);
 [[nodiscard]] b8 fuzzy_eq(Vec3 const &v1, Vec3 const &v2, f32 t = 0.01f);
 [[nodiscard]] b8 fuzzy_eq(Vec4 const &v1, Vec4 const &v2, f32 t = 0.01f);
@@ -548,32 +501,32 @@ template <typename T>
 }
 #endif
 
-} // namespace bee
+} // namespace y
 
 
 //=============================================================================
 //= ALIASES
 //=============================================================================
 
-#ifdef BEE_EXPOSE_ALIASES
-using namespace bee::TypeAlias_Containers;
-using namespace bee::TypeAlias_Pointers;
-using namespace bee::TypeAlias_Numbers;
-using namespace bee::TypeAlias_GLM;
+#ifdef yyExposeAliases
+using namespace y::TypeAliasContainers;
+using namespace y::TypeAliasPointers;
+using namespace y::TypeAliasNumbers;
+using namespace y::TypeAliasGLM;
 #endif
 
-#endif // BEE_HEADER
+#endif // _guard_y_header
 
 // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-#ifdef BEE_IMPLEMENTATION
+#ifdef yyDEFINITION
 
-#ifndef __BEE_IMPLEMENTATION_GUARD
-#define __BEE_IMPLEMENTATION_GUARD
+#ifndef _guard_y_impl
+#define _guard_y_impl
 
 #include <fstream>
 
-namespace bee {
+namespace y {
 namespace fs = std::filesystem;
 
 
@@ -581,7 +534,7 @@ namespace fs = std::filesystem;
 //= Argparse
 //=============================================================================
 
-#ifdef BEE_INCLUDE_ARGPARSE
+#ifdef yyUseLibArgparse
 
 CLI &cli_init(Str const &title, Str const &version, Str const &description) {
     static CLI cli { title, version };
@@ -614,7 +567,7 @@ void ElapsedTimer::reset() {
     m_valid = true;
     m_ref = Clock::now();
 }
-f64 ElapsedTimer::elapsed_s()  const { return f64(elapsed()) * ns_to_s; }
+f64 ElapsedTimer::elapsed_s() const { return f64(elapsed()) * ns_to_s; }
 f64 ElapsedTimer::elapsed_ms() const { return f64(elapsed()) * ns_to_ms; }
 f64 ElapsedTimer::elapsed_us() const { return f64(elapsed()) * ns_to_us; }
 f64 ElapsedTimer::elapsed_ns() const { return f64(elapsed()); }
@@ -767,11 +720,11 @@ b8 bin_check_magic(SpanConst<u8> bin, SpanConst<u8> magic) {
 
 Str file_read(Str const &input_file) {
     std::ifstream file(input_file, std::ios::ate | std::ios::binary);
-    Defer D{ [&]{ file.close(); } };
+    Defer D { [&] { file.close(); } };
 
     if (!file.is_open()) {
         return "";
-        bee_err("Issues opening file [r]: {}", input_file);
+        yErr("Issues opening file [r]: {}", input_file);
     }
 
     Str content;
@@ -785,7 +738,7 @@ Str file_read(Str const &input_file) {
 b8 file_write(Str const &output_file, char const *data, usize data_size, std::ios_base::openmode mode) {
     if (!data || data_size < 1) {
         return false;
-        bee_err("[file_write] Invalid data: {}", output_file);
+        yErr("[file_write] Invalid data: {}", output_file);
     }
 
     std::ofstream file(output_file, std::ios::out | std::ios::binary | mode);
@@ -793,7 +746,7 @@ b8 file_write(Str const &output_file, char const *data, usize data_size, std::io
 
     if (!file.is_open()) {
         return false;
-        bee_err("[file_write] Opening file: {}", output_file);
+        yErr("[file_write] Opening file: {}", output_file);
     }
 
     file.write(data, data_size);
@@ -841,7 +794,7 @@ f32 clamp_angle(f32 angle) {
     return angle - 360.f * turns;
 }
 
-#ifdef BEE_INCLUDE_GLM
+#ifdef yyUseLibGlm
 b8 fuzzy_eq(Vec2 const &v1, Vec2 const &v2, f32 t) { return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t); }
 b8 fuzzy_eq(Vec3 const &v1, Vec3 const &v2, f32 t) {
     return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t) && fuzzy_eq(v1.z, v2.z, t);
@@ -851,9 +804,9 @@ b8 fuzzy_eq(Vec4 const &v1, Vec4 const &v2, f32 t) {
 }
 #endif
 
-} // namespace bee
+} // namespace y
 
-#endif // __BEE_IMPLEMENTATION_GUARD
-#endif // BEE_IMPLEMENTATION
+#endif // _guard_y_impl
+#endif // yyDEFINITION
 
 // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
