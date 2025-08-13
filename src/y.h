@@ -24,8 +24,8 @@
         It could be undefined by 'yyUseLibFmt'
 
     Used conventions:
-    - camelCase  : Macros             : start with 'y'
-    - camelCase  : Defines            : start with 'yy'
+    - camelCase  : Macros             : Prefix 'y'
+    - camelCase  : Defines            : Prefix 'yy'
     - PascalCase : Types + Namespaces : Inside 'y' namespace
     - snake_case : Vars  + Funcs      : Inside 'y' namespace
     - m_ prefix  : Private vars
