@@ -61,6 +61,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -140,7 +141,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
-static const int ___Y_COUT_SETUP = []() {
+static const int __yWinCoutSetup = []() {
     SetConsoleOutputCP(CP_UTF8);
     return 0;
 }();
@@ -230,13 +231,21 @@ struct Defer {
     Defer(T &&cb) : m_cb(std::forward<T>(cb)) {}
     ~Defer() { m_cb(); }
 
-private:
+    private:
     const T m_cb;
 };
+
+//--- Bind Member -------------------------------------------------------------
 
 template <typename F, typename T>
 auto bind(F &&fn, T *obj) {
     return [obj, fn](auto &&...args) -> decltype(auto) { return (obj->*fn)(std::forward<decltype(args)>(args)...); };
+}
+
+//--- Bit ---------------------------------------------------------------------
+
+inline size_t bit(size_t n) {
+    return (1 << n);
 }
 
 //--- Numbers Aliases ---------------------------------------------------------
@@ -362,6 +371,7 @@ using OptRef = std::optional<std::reference_wrapper<T>>;
 
 // String
 using Str = std::string;
+using StrView = std::string_view;
 
 // Function
 template <typename T>
