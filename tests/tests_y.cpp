@@ -23,18 +23,51 @@ public:
         m_current = name;
     }
 
+    void ok(StrView title, bool condition) {
+        _test(title, condition, "Condition is false");
+    }
+
     template <typename T1, typename T2>
-    void eq(StrView title, T1 const &e1, T2 const &e2) {
+    void eq(StrView title, T1 const &lhs, T2 const &rhs) {
+        _test(title, lhs == rhs, yFmt("{} == {}", lhs, rhs))
+    }
+
+    template <typename T1, typename T2>
+    void gt(StrView title, T1 const &lhs, T2 const &rhs) {
+        _test(title, lhs == rhs, yFmt("{} > {}", lhs, rhs))
+    }
+
+    template <typename T1, typename T2>
+    void lt(StrView title, T1 const &lhs, T2 const &rhs) {
+        _test(title, lhs == rhs, yFmt("{} < {}", lhs, rhs))
+    }
+
+    template <typename T1, typename T2>
+    void gt_or_eq(StrView title, T1 const &lhs, T2 const &rhs) {
+        _test(title, lhs == rhs, yFmt("{} >= {}", lhs, rhs))
+    }
+
+    template <typename T1, typename T2>
+    void lt_or_eq(StrView title, T1 const &lhs, T2 const &rhs) {
+        _test(title, lhs == rhs, yFmt("{} <= {}", lhs, rhs))
+    }
+
+    void show_results() {
+        yPrintln("@ TESTs: {} / {}", m_passed, m_count);
+        yPrintln("{}", m_count == m_passed ? "@ -- OK" : "@ -- FAIL");
+    }
+
+private:
+
+    void _test(StrView title, bool passed, Str const & msg) {
         ++m_count;
-        bool const passed = e1 == e2;
         if (!passed) {
-            yPrintln("{} - {} | Not Equal - {} : {}", m_current, title, e1, e2);
+            yPrintln("{} -> {} | ⭕️ | {}", m_current, title, msg);
             return;
         }
         ++m_passed;
     }
 
-private:
     StrView m_current = "";
     u32 m_count = 0;
     u32 m_passed = 0;
@@ -145,122 +178,113 @@ int main() {
         T.eq("Sptr 2", a.f, sa->f);
     }
 
-    // T.show_results();
+    T.make_section("Optional Reference");
+    {
+        struct A {
+            i32 i = 42;
+        } a;
+
+        auto const fn_value = [](A &received_a) -> OptRef<A> { return received_a; };
+        auto opt = fn_value(a);
+        T.ok("Has Value", opt.has_value());
+        T.eq("Check Value", opt.value().get().i, 42);
+
+        auto const fn_null = [](A &received_a) -> OptRef<A> { return {}; };
+        T.ok("Not Has Value", !fn_null(a).has_value());
+    }
+
+    T.make_section("Elapsed Timer");
+    {
+        using namespace std::chrono_literals;
+        y::ETimer timer {};
+        T.ok("Init Invalid 1", !timer.is_valid());
+        T.eq("Init Invalid 2", timer.elapsed_ns() * timer.is_valid(), 0);
+        timer.reset();
+        std::this_thread::sleep_for(10ms);
+        T.gt("After Reset", timer.elapsed_ms() * timer.is_valid(), 9);
+    }
+
+    T.make_section("String Ops");
+    {
+        {
+            Str const s = "test STRING to PERFORM the tests";
+            T.eq("To Lower", y::str_lower(s), "test string to perform the tests");
+            T.eq("To Upper", y::str_upper(s), "TEST STRING TO PERFORM THE TESTS");
+            T.eq("To Capital", y::str_capital(s), "Test string to perform the tests");
+        }
+
+        {
+            Str const s = "1,2,3,4,5";
+            T.eq("Replace All", y::str_replace(s, ",", " / "), "1 / 2 / 3 / 4 / 5");
+            T.eq("Replace First", y::str_replace(s, ",", " / ", true), "1 / 2,3,4,5");
+        }
+
+        {
+            Str const s = "1.2-3:4·5";
+            Str const s_ok = "1[1] 2[2] 3[2] 4[4] 5";
+
+            Vec<Str> from = { "-", ".", "·", ":" };
+            Vec<Str> to = { "[2] ", "[1] ", "[4] ", "[3] " };
+            T.eq("Replace Many Unsorted", y::str_replace_many(s, from, to), s_ok);
+
+            from = { ".", "-", ":", "·" };
+            to = { "[1] ", "[2] ", "[3] ", "[4] " };
+            T.eq("Replace Many Sorted", y::str_replace_many(s, from, to, true), s_ok);
+        }
+
+        {
+            Str const s = "1,2,3,4,5";
+            Vec<Str> const s_res = { "1", "2", "3", "4", "5" };
+            T.eq("Split", y::str_split(s, ","), s_res);
+            T.eq("Join", y::str_join(s_res, ","),  s);
+        }
+
+        {
+            T.eq("Cut", y::str_cut(" / a / b / c / ", 3), "a / b / c");
+            T.eq("Cut L", y::str_cut_l(" / a / b / c", 3), "a / b / c");
+            T.eq("Cut R", y::str_cut_r("a / b / c / ", 3), "a / b / c");
+
+            T.ok("Contains", y::str_contains("a / b / c / ", " b "));
+
+            T.eq("Trim", y::str_trim(" aaa "), "aaa");
+            T.eq("Trim L", y::str_trim_l(" aaa "), "aaa ");
+            T.eq("Trim R", y::str_trim_r(" aaa "), " aaa");
+
+            // yInfo("==> {}", y::str_trim("***aaa***", "***"));
+            T.eq("Trim Not Space", y::str_trim("***aaa***", "***"), "aaa");
+        }
+
+    }
+
+    T.make_section("Files Ops");
+    {
+        Str const file_content = y::file_read("./to_file_read.txt");
+        Str const expected_content = "Test\nfile\nfor\nBEE\n";
+        T.eq("Read", file_content, expected_content);
+
+        auto const t = std::time(nullptr);
+        auto const tm = *std::localtime(&t);
+        std::ostringstream oss;
+        oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
+        Str const str = oss.str();
+        T.ok("Append", y::file_write_append("./to_file_append.txt", str + "\n"));
+        Str const append_content = y::file_read("./to_file_append.txt");
+        Vec<Str> const append_split = y::str_split(append_content, "\n");
+        T.eq("Append Validation", append_split[append_split.size() - 1], str);
+
+        Vec<u8> const bin { 'T', 'e', 's', 't', '\n', 'D', 'a', 't', 'a' };
+        T.ok("Write", y::file_write_trunc("./to_file_write.bin", (char const *)(bin.data()), bin.size()));
+        T.ok("Write Validation", y::fs::exists("./to_file_write.bin"));
+
+        auto const bin_content = y::bin_read("./to_file_write.bin");
+        Vec<u8> const magic { 'T', 'e', 's', 't' };
+        T.ok("Magic", y::bin_check_magic(bin_content, magic));
+
+        T.ok("Extension", y::file_check_extension("./to_file_write.bin", "BiN"));
+    }
+
+    T.show_results();
 }
-
-
-
-// // ==============================================
-// // ========== Optionals
-
-// TEST("Optional Reference", {
-//     struct A {
-//         i32 i = 0;
-//     };
-//     auto a = A { 42 };
-
-//     auto const fn_value = [](A &received_a) -> OptRef<A> { return received_a; };
-//     auto opt = fn_value(a);
-//     CHECK("Has Value", opt.has_value());
-//     CHECK("Check Value", opt.value().get().i == 42);
-//     auto const fn_null = [](A &received_a) -> OptRef<A> { return {}; };
-//     CHECK("Not Has Value", !fn_null(a).has_value());
-// });
-
-
-// // ==============================================
-// // ========== Time stuff
-
-// TEST("Elapsed Timer", {
-//     using namespace std::chrono_literals;
-//     bee::ETimer timer {};
-//     CHECK("Init Invalid 1", !timer.is_valid());
-//     CHECK("Init Invalid 2", timer.elapsed_ns() * timer.is_valid() == 0);
-//     timer.reset();
-//     std::this_thread::sleep_for(10ms);
-//     CHECK("After Reset", timer.elapsed_ms() * timer.is_valid() > 9);
-// });
-
-
-// // ==============================================
-// // ========== String helpers/operations
-
-// TEST("String Helpers", {
-//     Str const to_case = "test STRING to PERFORM the tests";
-//     CHECK("To Lower", bee::str_lower(to_case) == "test string to perform the tests");
-//     CHECK("To Upper", bee::str_upper(to_case) == "TEST STRING TO PERFORM THE TESTS");
-//     CHECK("To Capital", bee::str_capital(to_case) == "Test string to perform the tests");
-
-//     Str const to_replace = "1,2,3,4,5";
-//     CHECK("Replace All", bee::str_replace(to_replace, ",", " / ") == "1 / 2 / 3 / 4 / 5");
-//     CHECK("Replace First", bee::str_replace(to_replace, ",", " / ", true) == "1 / 2,3,4,5");
-
-//     Str const to_replace_many = "1.2-3:4·5";
-//     Str const to_replace_many_ok = "1[1] 2[2] 3[2] 4[4] 5";
-//     Vec<Str> from = { "-", ".", "·", ":" };
-//     Vec<Str> to = { "[2] ", "[1] ", "[4] ", "[3] " };
-//     CHECK("Replace Many Unsorted", bee::str_replace_many(to_replace_many, from, to) != to_replace_many_ok);
-//     from = { ".", "-", ":", "·" };
-//     to = { "[1] ", "[2] ", "[3] ", "[4] " };
-//     CHECK("Replace Many Sorted", bee::str_replace_many(to_replace_many, from, to, true) != to_replace_many_ok);
-
-//     Str const to_split = "1,2,3,4,5";
-//     Vec<Str> const splitted = { "1", "2", "3", "4", "5" };
-//     CHECK("Split", bee::str_split(to_split, ",") == splitted);
-//     CHECK("Join", bee::str_join(splitted, ",") == to_split);
-
-//     CHECK("Cut", bee::str_cut(" / a / b / c / ", 3) == "a / b / c");
-//     CHECK("Cut L", bee::str_cut_l(" / a / b / c", 3) == "a / b / c");
-//     CHECK("Cut R", bee::str_cut_r("a / b / c / ", 3) == "a / b / c");
-
-//     CHECK("Contains", bee::str_contains("a / b / c / ", " b "));
-
-//     CHECK("Trim", bee::str_trim(" aaa ") == "aaa");
-//     CHECK("Trim L", bee::str_trim_l(" aaa ") == "aaa ");
-//     CHECK("Trim R", bee::str_trim_r(" aaa ") == " aaa");
-
-//     // bee_info("==> {}", bee::str_trim("***aaa***", "***"));
-//     // CHECK("Trim Not Space", bee::str_trim("***aaa***", "***") == "aaa");
-// });
-
-
-// // ==============================================
-// // ========== File helpers/operations
-
-// TEST("File/Bin Helpers", {
-//     Str const file_content = bee::file_read("./to_file_read.txt");
-//     Str const expected_content = "Test\nfile\nfor\nBEE\n";
-//     CHECK("Read", file_content == expected_content);
-
-//     auto const t = std::time(nullptr);
-//     auto const tm = *std::localtime(&t);
-//     std::ostringstream oss;
-//     oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
-//     Str const str = oss.str();
-//     CHECK("Append", bee::file_write_append("./to_file_append.txt", str + "\n"));
-//     Str const append_content = bee::file_read("./to_file_append.txt");
-//     Vec<Str> const append_split = bee::str_split(append_content, "\n");
-//     CHECK("Append Validation", append_split[append_split.size() - 1] == str);
-
-//     Vec<u8> const bin { 'T', 'e', 's', 't', '\n', 'D', 'a', 't', 'a' };
-//     CHECK("Write", bee::file_write_trunc("./to_file_write.bin", recast(char const *, bin.data()), bin.size()));
-//     CHECK("Write Validation", bee::fs::exists("./to_file_write.bin"));
-
-//     auto const bin_content = bee::bin_read("./to_file_write.bin");
-//     Vec<u8> const magic { 'T', 'e', 's', 't' };
-//     CHECK("Magic", bee::bin_check_magic(bin_content, magic));
-
-//     CHECK("Extension", bee::file_check_extension("./to_file_write.bin", "BiN"));
-// });
-
-
-// // ############################################################################
-// // #                                                                          #
-// // #                                                                          #
-// // #                                BENCHMARKS                                #
-// // #                                                                          #
-// // #                                                                          #
-// // ############################################################################
 
 
 // // ==============================================
