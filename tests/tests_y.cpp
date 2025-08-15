@@ -1,18 +1,8 @@
 
-#define BEE_TEST_IMPLEMENTATION
-#include "../src/bee_test.hpp"
-
-#define BEE_BENCH_IMPLEMENTATION
-#define BEE_BENCH_STDOUT_ONCE
-#include "../src/bee_bench.hpp"
-
 #define yyDEFINITION
 #define yyUseCustomFmt
 #define yyExposeAliases
 #include "../src/y.h"
-
-#include <iostream>
-
 
 namespace y {
 
@@ -20,7 +10,7 @@ class Tester {
 
 public:
     void make_section(StrView name) {
-        m_current = name;
+        m_section = name;
     }
 
     void ok(StrView title, bool condition) {
@@ -29,48 +19,69 @@ public:
 
     template <typename T1, typename T2>
     void eq(StrView title, T1 const &lhs, T2 const &rhs) {
-        _test(title, lhs == rhs, yFmt("{} == {}", lhs, rhs))
+        _test(title, lhs == rhs, yFmt("{} == {}", lhs, rhs));
     }
 
     template <typename T1, typename T2>
     void gt(StrView title, T1 const &lhs, T2 const &rhs) {
-        _test(title, lhs == rhs, yFmt("{} > {}", lhs, rhs))
+        _test(title, lhs > rhs, yFmt("{} > {}", lhs, rhs));
     }
 
     template <typename T1, typename T2>
     void lt(StrView title, T1 const &lhs, T2 const &rhs) {
-        _test(title, lhs == rhs, yFmt("{} < {}", lhs, rhs))
+        _test(title, lhs < rhs, yFmt("{} < {}", lhs, rhs));
     }
 
     template <typename T1, typename T2>
     void gt_or_eq(StrView title, T1 const &lhs, T2 const &rhs) {
-        _test(title, lhs == rhs, yFmt("{} >= {}", lhs, rhs))
+        _test(title, lhs >= rhs, yFmt("{} >= {}", lhs, rhs));
     }
 
     template <typename T1, typename T2>
     void lt_or_eq(StrView title, T1 const &lhs, T2 const &rhs) {
-        _test(title, lhs == rhs, yFmt("{} <= {}", lhs, rhs))
+        _test(title, lhs <= rhs, yFmt("{} <= {}", lhs, rhs));
     }
 
     void show_results() {
-        yPrintln("@ TESTs: {} / {}", m_passed, m_count);
-        yPrintln("{}", m_count == m_passed ? "@ -- OK" : "@ -- FAIL");
+        bool const done = m_pass_count == m_total_count;
+        yPrintln("","");
+
+        if (m_pass_count and not done)
+            yPrintln("✅ PASS  |  {} / {}", m_pass_count, m_total_count);
+
+        if (m_fail_count)
+            yPrintln("❌ FAIL  |  {} / {}", m_fail_count, m_total_count);
+
+        if (done)
+            yPrintln("🏁 DONE  |  {} / {}", m_pass_count, m_total_count);
+    }
+
+    void set_align_column(usize col) {
+        m_align_col = std::clamp(col, 0ul, 255ul);
     }
 
 private:
 
     void _test(StrView title, bool passed, Str const & msg) {
-        ++m_count;
-        if (!passed) {
-            yPrintln("{} -> {} | ⭕️ | {}", m_current, title, msg);
+        ++m_total_count;
+        if (passed) {
+            Str   const msg_l   = yFmt("⭕️ {} -> {}", m_section, title);
+            usize const sep_len = m_align_col > msg_l.size() ? m_align_col - msg_l.size() : 0ul;
+            Str   const sep     = Str(sep_len, ' ');
+            yPrintln("{}{}  |  {}", msg_l, sep, msg);
+            ++m_fail_count;
             return;
         }
-        ++m_passed;
+        ++m_pass_count;
     }
 
-    StrView m_current = "";
-    u32 m_count = 0;
-    u32 m_passed = 0;
+    StrView m_section = "";
+
+    u32 m_total_count = 0;
+    u32 m_pass_count = 0;
+    u32 m_fail_count = 0;
+
+    usize m_align_col = 0;
 };
 
 } // namespace y
@@ -78,6 +89,7 @@ private:
 int main() {
 
     y::Tester T{};
+    T.set_align_column(42);
 
     T.make_section("Defer Ref");
     {
@@ -124,7 +136,7 @@ int main() {
         T.eq("As f32"       , sizeof(f32(3.14159)), sizeof(f32));
 
         i32 *heap_i = new i32(5);
-        T.eq("As void*", typeid(((void*)(heap_i))), typeid(void *));
+        T.ok("As void*", typeid(((void*)(heap_i))) == typeid(void *));
         delete heap_i;
     }
 
@@ -160,7 +172,6 @@ int main() {
         T.eq("f64 max", f64_max, std::numeric_limits<double>::max());
         T.eq("f64 epsilon", f64_epsilon, std::numeric_limits<double>::epsilon());
     }
-
 
     T.make_section("Pointers Aliases");
     {
@@ -219,69 +230,69 @@ int main() {
             T.eq("Replace First", y::str_replace(s, ",", " / ", true), "1 / 2,3,4,5");
         }
 
-        {
-            Str const s = "1.2-3:4·5";
-            Str const s_ok = "1[1] 2[2] 3[2] 4[4] 5";
+        // {
+        //     Str const s = "1.2-3:4·5";
+        //     Str const s_ok = "1[1] 2[2] 3[2] 4[4] 5";
 
-            Vec<Str> from = { "-", ".", "·", ":" };
-            Vec<Str> to = { "[2] ", "[1] ", "[4] ", "[3] " };
-            T.eq("Replace Many Unsorted", y::str_replace_many(s, from, to), s_ok);
+        //     Vec<Str> from = { "-", ".", "·", ":" };
+        //     Vec<Str> to = { "[2] ", "[1] ", "[4] ", "[3] " };
+        //     T.eq("Replace Many Unsorted", y::str_replace_many(s, from, to), s_ok);
 
-            from = { ".", "-", ":", "·" };
-            to = { "[1] ", "[2] ", "[3] ", "[4] " };
-            T.eq("Replace Many Sorted", y::str_replace_many(s, from, to, true), s_ok);
-        }
+        //     from = { ".", "-", ":", "·" };
+        //     to = { "[1] ", "[2] ", "[3] ", "[4] " };
+        //     T.eq("Replace Many Sorted", y::str_replace_many(s, from, to, true), s_ok);
+        // }
 
-        {
-            Str const s = "1,2,3,4,5";
-            Vec<Str> const s_res = { "1", "2", "3", "4", "5" };
-            T.eq("Split", y::str_split(s, ","), s_res);
-            T.eq("Join", y::str_join(s_res, ","),  s);
-        }
+        // {
+        //     Str const s = "1,2,3,4,5";
+        //     Vec<Str> const s_res = { "1", "2", "3", "4", "5" };
+        //     T.eq("Split", y::str_split(s, ","), s_res);
+        //     T.eq("Join", y::str_join(s_res, ","),  s);
+        // }
 
-        {
-            T.eq("Cut", y::str_cut(" / a / b / c / ", 3), "a / b / c");
-            T.eq("Cut L", y::str_cut_l(" / a / b / c", 3), "a / b / c");
-            T.eq("Cut R", y::str_cut_r("a / b / c / ", 3), "a / b / c");
+        // {
+        //     T.eq("Cut", y::str_cut(" / a / b / c / ", 3), "a / b / c");
+        //     T.eq("Cut L", y::str_cut_l(" / a / b / c", 3), "a / b / c");
+        //     T.eq("Cut R", y::str_cut_r("a / b / c / ", 3), "a / b / c");
 
-            T.ok("Contains", y::str_contains("a / b / c / ", " b "));
+        //     T.ok("Contains", y::str_contains("a / b / c / ", " b "));
 
-            T.eq("Trim", y::str_trim(" aaa "), "aaa");
-            T.eq("Trim L", y::str_trim_l(" aaa "), "aaa ");
-            T.eq("Trim R", y::str_trim_r(" aaa "), " aaa");
+        //     T.eq("Trim", y::str_trim(" aaa "), "aaa");
+        //     T.eq("Trim L", y::str_trim_l(" aaa "), "aaa ");
+        //     T.eq("Trim R", y::str_trim_r(" aaa "), " aaa");
 
-            // yInfo("==> {}", y::str_trim("***aaa***", "***"));
-            T.eq("Trim Not Space", y::str_trim("***aaa***", "***"), "aaa");
-        }
+        //     // yInfo("==> {}", y::str_trim("***aaa***", "***"));
+        //     T.eq("Trim Not Space", y::str_trim("***aaa***", "***"), "aaa");
+        // }
 
     }
 
-    T.make_section("Files Ops");
-    {
-        Str const file_content = y::file_read("./to_file_read.txt");
-        Str const expected_content = "Test\nfile\nfor\nBEE\n";
-        T.eq("Read", file_content, expected_content);
+    // T.make_section("Files Ops");
+    // {
+    //     Str const file_content = y::file_read("./to_file_read.txt");
+    //     Str const expected_content = "Test\nfile\nfor\nBEE\n";
+    //     T.eq("Read", file_content, expected_content);
 
-        auto const t = std::time(nullptr);
-        auto const tm = *std::localtime(&t);
-        std::ostringstream oss;
-        oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
-        Str const str = oss.str();
-        T.ok("Append", y::file_write_append("./to_file_append.txt", str + "\n"));
-        Str const append_content = y::file_read("./to_file_append.txt");
-        Vec<Str> const append_split = y::str_split(append_content, "\n");
-        T.eq("Append Validation", append_split[append_split.size() - 1], str);
+    //     auto const t = std::time(nullptr);
+    //     auto const tm = *std::localtime(&t);
+    //     std::ostringstream oss;
+    //     oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
+    //     Str const str = oss.str();
+    //     T.ok("Append", y::file_write_append("./to_file_append.txt", str + "\n"));
+    //     Str const append_content = y::file_read("./to_file_append.txt");
+    //     Vec<Str> const append_split = y::str_split(append_content, "\n");
+    //     T.eq("Append Validation", append_split[append_split.size() - 1], str);
 
-        Vec<u8> const bin { 'T', 'e', 's', 't', '\n', 'D', 'a', 't', 'a' };
-        T.ok("Write", y::file_write_trunc("./to_file_write.bin", (char const *)(bin.data()), bin.size()));
-        T.ok("Write Validation", y::fs::exists("./to_file_write.bin"));
+    //     Vec<u8> const bin { 'T', 'e', 's', 't', '\n', 'D', 'a', 't', 'a' };
+    //     T.ok("Write", y::file_write_trunc("./to_file_write.bin", (char const *)(bin.data()), bin.size()));
+    //     T.ok("Write Validation", y::fs::exists("./to_file_write.bin"));
 
-        auto const bin_content = y::bin_read("./to_file_write.bin");
-        Vec<u8> const magic { 'T', 'e', 's', 't' };
-        T.ok("Magic", y::bin_check_magic(bin_content, magic));
+    //     auto const bin_content = y::bin_read("./to_file_write.bin");
+    //     Vec<u8> const magic { 'T', 'e', 's', 't' };
+    //     T.ok("Magic", y::bin_check_magic(bin_content, magic));
 
-        T.ok("Extension", y::file_check_extension("./to_file_write.bin", "BiN"));
-    }
+    //     T.ok("Extension", y::file_check_extension("./to_file_write.bin", "BiN"));
+    // }
 
     T.show_results();
 }

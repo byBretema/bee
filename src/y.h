@@ -66,6 +66,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <cassert>
 
 //--- SPAN --------------------------------------------------------------------
 
@@ -662,9 +663,8 @@ Str str_replace_many(Str str, Vec<Str> const &from, Vec<Str> const &to, b8 sorte
     b8 const same_size = from.size() == to.size();
     b8 const is_empty = same_size && from.size() < 1;
     if (!same_size || is_empty) {
-        if (!same_size) {
-            assert(0);
-        }
+        // assert(same_size);
+        yWarn("str_replace_many - {}", "Bad sizes");
         return str;
     }
 
