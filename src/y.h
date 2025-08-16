@@ -49,6 +49,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -66,7 +67,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <cassert>
 
 //--- SPAN --------------------------------------------------------------------
 
@@ -131,9 +131,12 @@
 
 //--- Log Builder -------------------------------------------------------------
 
-#define yLog(level, msg, ...) fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, yFmt(msg, __VA_ARGS__))
+#define yLog(level, msg, ...)                                                                      \
+    fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, yFmt(msg, __VA_ARGS__))
 #define yPrintln(msg, ...) fmt::println("{}", yFmt(msg, __VA_ARGS__))
+#define yPrintln_(msg) fmt::println(msg)
 #define yPrint(msg, ...) fmt::print("{}", yFmt(msg, __VA_ARGS__))
+#define yPrint_(msg) fmt::print(msg)
 
 #else //!! Not using fmtlib (rely on std::cout)
 
@@ -180,10 +183,13 @@ std::string yFmt(std::string_view msg, Args... args) {
 
 //--- Log Builder -------------------------------------------------------------
 
-#define yLog(level, msg, ...)                                                                                          \
-    std::cout << "[" << level << "] | " << __FILE__ << ":" << __LINE__ << " | " << yFmt(msg, __VA_ARGS__) << "\n"
+#define yLog(level, msg, ...)                                                                      \
+    std::cout << "[" << level << "] | " << __FILE__ << ":" << __LINE__ << " | "                    \
+              << yFmt(msg, __VA_ARGS__) << "\n"
 #define yPrintln(msg, ...) std::cout << yFmt(msg, __VA_ARGS__) << "\n"
-#define yPrint(msg, ...) std::cout << yFmt(msg, __VA_ARGS__);
+#define yPrint(msg, ...) std::cout << yFmt(msg, __VA_ARGS__)
+#define yPrintln_(msg) std::cout << msg << "\n"
+#define yPrint_(msg) std::cout << msg;
 #endif
 
 //--- Actual print API --------------------------------------------------------
@@ -200,14 +206,14 @@ std::string yFmt(std::string_view msg, Args... args) {
 
 //--- Class helpers -----------------------------------------------------------
 
-#define yNoCopy(T)                                                                                                     \
-public:                                                                                                                \
-    T(T const &) = delete;                                                                                             \
+#define yNoCopy(T)                                                                                 \
+public:                                                                                            \
+    T(T const &) = delete;                                                                         \
     T &operator=(T const &) = delete;
 
-#define yNoMove(T)                                                                                                     \
-public:                                                                                                                \
-    T(T &&) noexcept = delete;                                                                                         \
+#define yNoMove(T)                                                                                 \
+public:                                                                                            \
+    T(T &&) noexcept = delete;                                                                     \
     T &operator=(T &&) noexcept = delete;
 
 #define yNoCopyNoMove(T) yNoCopy(T) yNoMove(T)
@@ -232,22 +238,24 @@ struct Defer {
     Defer(T &&cb) : m_cb(std::forward<T>(cb)) {}
     ~Defer() { m_cb(); }
 
-    private:
+private:
     const T m_cb;
 };
+#define yDefer(x) y::Defer y_defer_var { [&] { x; } };
+#define yDeferc(x) y::Defer y_defer_var { [=] { x; } };
 
 //--- Bind Member -------------------------------------------------------------
 
 template <typename F, typename T>
 auto bind(F &&fn, T *obj) {
-    return [obj, fn](auto &&...args) -> decltype(auto) { return (obj->*fn)(std::forward<decltype(args)>(args)...); };
+    return [obj, fn](auto &&...args) -> decltype(auto) {
+        return (obj->*fn)(std::forward<decltype(args)>(args)...);
+    };
 }
 
 //--- Bit ---------------------------------------------------------------------
 
-inline size_t bit(size_t n) {
-    return (1 << n);
-}
+inline size_t bit(size_t n) { return (1 << n); }
 
 //--- Numbers Aliases ---------------------------------------------------------
 
@@ -459,10 +467,11 @@ using ETimer = ElapsedTimer;
 [[nodiscard]] Str str_capital(Str str);
 
 [[nodiscard]] b8 str_contains(Str const &str, Str const &substr);
-[[nodiscard]] Vec<Str> str_split(Str const &str, Str const &delimeter);
+[[nodiscard]] Vec<Str> str_split(StrView str, StrView delimeter);
 [[nodiscard]] Str str_join(Vec<Str> const &strlist, Str const &delimeter);
 [[nodiscard]] Str str_replace(Str str, Str const &from, Str const &to, b8 only_first_match = false);
-[[nodiscard]] Str str_replace_many(Str str, Vec<Str> const &from, Vec<Str> const &to, b8 sorted = false);
+[[nodiscard]] Str str_replace_many(Str str, Vec<Str> const &from, Vec<Str> const &to,
+                                   b8 sorted = false);
 
 [[nodiscard]] Str str_cut(Str const &str, i32 count);
 [[nodiscard]] Str str_cut_l(Str const &str, i32 count);
@@ -525,6 +534,21 @@ using namespace y::TypeAliasPointers;
 using namespace y::TypeAliasNumbers;
 using namespace y::TypeAliasGLM;
 #endif
+
+//=============================================================================
+//= Print Helpers
+//=============================================================================
+
+// template <typename T>
+// std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
+//     os << "[";
+//     for (size_t i = 0; i < vec.size(); ++i) {
+//         os << vec[i];
+//         if (i < vec.size() - 1) { os << ", "; }
+//     }
+//     os << "]";
+//     return os;
+// }
 
 #endif // _guard_y_header
 
@@ -609,24 +633,28 @@ Str str_capital(Str str) {
 
 b8 str_contains(Str const &str, Str const &substr) { return str.find(substr) < str.size(); }
 
-Vec<Str> str_split(Str const &str, Str const &delimeter) {
+Vec<Str> str_split(StrView str, StrView delimiter) {
 
-    Str token;
-    Vec<Str> splitted;
+    Vec<Str> splitted {};
+
+    if (delimiter.empty()) {
+        return splitted;
+    }
+
     usize ini = 0;
     usize end = 0;
 
     // Split and store the string body
-    while ((end = str.find(delimeter, ini)) < str.size()) {
-        token = str.substr(ini, end - ini);
-        ini = end + delimeter.size();
-        splitted.push_back(token);
+    while ((end = str.find(delimiter, ini)) < str.size()) {
+        auto const token = str.substr(ini, end - ini);
+        ini = end + delimiter.size();
+        splitted.push_back(Str(token));
     }
 
     // Store the string tail
     if (ini < str.size()) {
-        token = str.substr(ini);
-        splitted.push_back(token);
+        auto const token = str.substr(ini);
+        splitted.push_back(Str(token));
     }
 
     return splitted;
@@ -684,7 +712,9 @@ Str str_replace_many(Str str, Vec<Str> const &from, Vec<Str> const &to, b8 sorte
 
 Str str_cut(Str const &str, i32 count) { return str_cut_r(str_cut_l(str, count), count); }
 Str str_cut_l(Str const &str, i32 count) { return str.substr(count); }
-Str str_cut_r(Str const &str, i32 count) { return str.substr(0, std::max(i32(str.size()) - count, count)); }
+Str str_cut_r(Str const &str, i32 count) {
+    return str.substr(0, std::max(i32(str.size()) - count, count));
+}
 
 Str str_trim(Str str, Str const &individual_chars_to_remove) {
     auto const l = str_trim_l(str, individual_chars_to_remove);
@@ -745,7 +775,8 @@ Str file_read(Str const &input_file) {
     return content;
 }
 
-b8 file_write(Str const &output_file, char const *data, usize data_size, std::ios_base::openmode mode) {
+b8 file_write(Str const &output_file, char const *data, usize data_size,
+              std::ios_base::openmode mode) {
     if (!data || data_size < 1) {
         return false;
         yErr("[file_write] Invalid data: {}", output_file);
@@ -805,16 +836,20 @@ f32 clamp_angle(f32 angle) {
 }
 
 #ifdef yyUseLibGlm
-b8 fuzzy_eq(Vec2 const &v1, Vec2 const &v2, f32 t) { return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t); }
+b8 fuzzy_eq(Vec2 const &v1, Vec2 const &v2, f32 t) {
+    return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t);
+}
 b8 fuzzy_eq(Vec3 const &v1, Vec3 const &v2, f32 t) {
     return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t) && fuzzy_eq(v1.z, v2.z, t);
 }
 b8 fuzzy_eq(Vec4 const &v1, Vec4 const &v2, f32 t) {
-    return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t) && fuzzy_eq(v1.z, v2.z, t) && fuzzy_eq(v1.w, v2.w, t);
+    return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t) && fuzzy_eq(v1.z, v2.z, t) &&
+           fuzzy_eq(v1.w, v2.w, t);
 }
 #endif
 
 } // namespace y
+
 
 #endif // _guard_y_impl
 #endif // yyDEFINITION
