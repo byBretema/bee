@@ -127,19 +127,20 @@
 
 //--- String Builder ----------------------------------------------------------
 
-#define yFmt(msg, ...) fmt::format(msg, __VA_ARGS__)
+#define yFmt(msg, ...) fmt::format((msg), __VA_ARGS__)
 
 //--- Log Builder -------------------------------------------------------------
 
 #define yLog(level, msg, ...)                                                                      \
-    fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, yFmt(msg, __VA_ARGS__))
-#define yPrintln(msg, ...) fmt::println("{}", yFmt(msg, __VA_ARGS__))
-#define yPrintln_(msg) fmt::println(msg)
-#define yPrint(msg, ...) fmt::print("{}", yFmt(msg, __VA_ARGS__))
-#define yPrint_(msg) fmt::print(msg)
+    fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, yFmt((msg), __VA_ARGS__))
+#define yPrintln(msg, ...) fmt::println("{}", yFmt((msg), __VA_ARGS__))
+#define yPrintln_(msg) fmt::println((msg))
+#define yPrint(msg, ...) fmt::print("{}", yFmt((msg), __VA_ARGS__))
+#define yPrint_(msg) fmt::print((msg))
 
 #else //!! Not using fmtlib (rely on std::cout)
 
+#include <format>
 #include <iostream>
 #include <regex>
 
@@ -186,18 +187,18 @@ std::string yFmt(std::string_view msg, Args... args) {
 #define yLog(level, msg, ...)                                                                      \
     std::cout << "[" << level << "] | " << __FILE__ << ":" << __LINE__ << " | "                    \
               << yFmt(msg, __VA_ARGS__) << "\n"
-#define yPrintln(msg, ...) std::cout << yFmt(msg, __VA_ARGS__) << "\n"
-#define yPrint(msg, ...) std::cout << yFmt(msg, __VA_ARGS__)
-#define yPrintln_(msg) std::cout << msg << "\n"
-#define yPrint_(msg) std::cout << msg;
+#define yPrintln(msg, ...) std::cout << yFmt((msg), __VA_ARGS__) << "\n"
+#define yPrint(msg, ...) std::cout << yFmt((msg), __VA_ARGS__)
+#define yPrintln_(msg) std::cout << (msg) << "\n"
+#define yPrint_(msg) std::cout << (msg);
 #endif
 
 //--- Actual print API --------------------------------------------------------
 
-#define yInfo(msg, ...) yLog("INFO", msg, __VA_ARGS__)
-#define yWarn(msg, ...) yLog("WARN", msg, __VA_ARGS__)
-#define yErr(msg, ...) yLog("ERRO", msg, __VA_ARGS__)
-#define yDbg(msg, ...) yLog("DEBG", msg, __VA_ARGS__)
+#define yInfo(msg, ...) yLog("INFO", (msg), __VA_ARGS__)
+#define yWarn(msg, ...) yLog("WARN", (msg), __VA_ARGS__)
+#define yErr(msg, ...) yLog("ERRO", (msg), __VA_ARGS__)
+#define yDbg(msg, ...) yLog("DEBG", (msg), __VA_ARGS__)
 
 
 //=============================================================================
@@ -385,6 +386,8 @@ using StrView = std::string_view;
 // Function
 template <typename T>
 using Fn = std::function<T>;
+using VoidFn = std::function<void()>;
+using VoidFn_ = std::function<void()> const &;
 
 // Span
 template <typename T>
@@ -467,7 +470,7 @@ using ETimer = ElapsedTimer;
 [[nodiscard]] Str str_capital(Str str);
 
 [[nodiscard]] b8 str_contains(Str const &str, Str const &substr);
-[[nodiscard]] Vec<Str> str_split(StrView str, StrView delimeter);
+[[nodiscard]] Vec<Str> str_split(Str const & str, Str const & delimeter);
 [[nodiscard]] Str str_join(Vec<Str> const &strlist, Str const &delimeter);
 [[nodiscard]] Str str_replace(Str str, Str const &from, Str const &to, b8 only_first_match = false);
 [[nodiscard]] Str str_replace_many(Str str, Vec<Str> const &from, Vec<Str> const &to,
@@ -539,16 +542,16 @@ using namespace y::TypeAliasGLM;
 //= Print Helpers
 //=============================================================================
 
-// template <typename T>
-// std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
-//     os << "[";
-//     for (size_t i = 0; i < vec.size(); ++i) {
-//         os << vec[i];
-//         if (i < vec.size() - 1) { os << ", "; }
-//     }
-//     os << "]";
-//     return os;
-// }
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
+    os << "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        os << vec[i];
+        if (i < vec.size() - 1) { os << ", "; }
+    }
+    os << "]";
+    return os;
+}
 
 #endif // _guard_y_header
 
@@ -585,8 +588,11 @@ bool cli_parse(CLI &cli, int argc, char *argv[]) {
         cli.parse_args(argc, argv);
         return true;
     } catch (const std::exception &err) {
-        fmt::println("{}", err.what());
-        fmt::println("{}", cli.help().str());
+        yPrintln("{}", err.what());
+        yPrintln("{}", cli.help().str());
+        return false;
+    } catch (...) {
+        yPrintln("{}", cli.help().str());
         return false;
     }
 }
@@ -633,7 +639,7 @@ Str str_capital(Str str) {
 
 b8 str_contains(Str const &str, Str const &substr) { return str.find(substr) < str.size(); }
 
-Vec<Str> str_split(StrView str, StrView delimiter) {
+Vec<Str> str_split(Str const & str, Str const & delimiter) {
 
     Vec<Str> splitted {};
 
@@ -764,7 +770,7 @@ Str file_read(Str const &input_file) {
 
     if (!file.is_open()) {
         return "";
-        yErr("Issues opening file [r]: {}", input_file);
+        yErr("[file_read] Opening file: {}", input_file);
     }
 
     Str content;

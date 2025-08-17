@@ -13,33 +13,33 @@ public:
         m_section = name;
     }
 
-    void ok(StrView title, bool condition) {
-        _test(title, condition, "Condition is false");
+    void ok(StrView title, bool c) {
+        test(title, [&]{ return c; }, "Condition is false");
     }
 
     template <typename T1, typename T2>
     void eq(StrView title, T1 const &lhs, T2 const &rhs) {
-        _test(title, lhs == rhs, yFmt("{} == {}", lhs, rhs));
+        test(title, [&]{ return lhs == rhs; }, yFmt("{} == {}", lhs, rhs));
     }
 
     template <typename T1, typename T2>
     void gt(StrView title, T1 const &lhs, T2 const &rhs) {
-        _test(title, lhs > rhs, yFmt("{} > {}", lhs, rhs));
+        test(title, [&]{ return lhs > rhs; }, yFmt("{} > {}", lhs, rhs));
     }
 
     template <typename T1, typename T2>
     void lt(StrView title, T1 const &lhs, T2 const &rhs) {
-        _test(title, lhs < rhs, yFmt("{} < {}", lhs, rhs));
+        test(title, [&]{ return lhs < rhs; }, yFmt("{} < {}", lhs, rhs));
     }
 
     template <typename T1, typename T2>
     void gt_or_eq(StrView title, T1 const &lhs, T2 const &rhs) {
-        _test(title, lhs >= rhs, yFmt("{} >= {}", lhs, rhs));
+        test(title, [&]{ return lhs >= rhs; }, yFmt("{} >= {}", lhs, rhs));
     }
 
     template <typename T1, typename T2>
     void lt_or_eq(StrView title, T1 const &lhs, T2 const &rhs) {
-        _test(title, lhs <= rhs, yFmt("{} <= {}", lhs, rhs));
+        test(title, [&]{ return lhs <= rhs; }, yFmt("{} <= {}", lhs, rhs));
     }
 
     void show_results() {
@@ -60,19 +60,32 @@ public:
         m_align_col = std::clamp(col, 0ul, 255ul);
     }
 
+    void test(StrView title, Fn<bool()> fn, StrView msg = "") {
+        if (!fn) { abort(); }
+        on_start();
+        try {
+            fn() ? on_passed() : on_failed(title, msg);
+        } catch (const std::exception &err) {
+            on_failed(title, yFmt("{} -- {}", err.what(), msg));
+        } catch (...) {
+            on_failed(title, yFmt("??? -- {}", msg));
+        }
+    }
+
 private:
 
-    void _test(StrView title, bool passed, Str const & msg) {
+    void on_start() {
         ++m_total_count;
-        if (!passed) {
-            Str   const msg_l   = yFmt("⭕️ {} -> {}", m_section, title);
-            usize const sep_len = m_align_col > msg_l.size() ? m_align_col - msg_l.size() : 0ul;
-            Str   const sep     = Str(sep_len, ' ');
-            yPrintln("{}{}  |  {}", msg_l, sep, msg);
-            ++m_fail_count;
-            return;
-        }
+    }
+    void on_passed() {
         ++m_pass_count;
+    }
+    void on_failed(StrView title, StrView msg) {
+        Str   const msg_l   = yFmt("⭕️ {} -> {}", m_section, title);
+        usize const sep_len = m_align_col > msg_l.size() ? m_align_col - msg_l.size() : 0ul;
+        Str   const sep     = Str(sep_len, ' ');
+        yPrintln("{}{}  |  {}", msg_l, sep, msg);
+        ++m_fail_count;
     }
 
     StrView m_section = "";
@@ -120,6 +133,8 @@ int main() {
         T.eq("i32", yFmt("Test {}", 42)      , "Test 42"     );
         T.eq("f32", yFmt("Test {}", 3.14159f), "Test 3.14159");
         T.eq("f64", yFmt("Test {}", 3.14159) , "Test 3.14159");
+
+        T.test("vec i32", []{ yPrint("{}", (Vec{1,2,3,4})); return true; });
     }
 
     T.make_section("Bit Ops");
