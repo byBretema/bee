@@ -205,6 +205,14 @@ std::string yFmt(std::string_view msg, Args... args) {
 //= OTHER MACROS
 //=============================================================================
 
+//--- Iterators ---------------------------------------------------------------
+
+#define yItB(c) std::begin(c)
+#define yItE(c) std::end(c)
+#define yItBE(c) yItB(c), yItE(c)
+#define yItBEB(c) yItB(c), yItE(c), yItB(c)
+#define yItRng(c, i, e) yItB(c) + i, yItB(c) + e
+
 //--- Class helpers -----------------------------------------------------------
 
 #define yNoCopy(T)                                                                                 \
@@ -469,8 +477,8 @@ using ETimer = ElapsedTimer;
 [[nodiscard]] Str str_upper(Str str);
 [[nodiscard]] Str str_capital(Str str);
 
-[[nodiscard]] b8 str_contains(Str const &str, Str const &substr);
-[[nodiscard]] Vec<Str> str_split(Str const & str, Str const & delimeter);
+[[nodiscard]] b8 str_contains(StrView str, StrView substr);
+[[nodiscard]] Vec<Str> str_split(StrView str, StrView delimeter);
 [[nodiscard]] Str str_join(Vec<Str> const &strlist, Str const &delimeter);
 [[nodiscard]] Str str_replace(Str str, Str const &from, Str const &to, b8 only_first_match = false);
 [[nodiscard]] Str str_replace_many(Str str, Vec<Str> const &from, Vec<Str> const &to,
@@ -543,11 +551,13 @@ using namespace y::TypeAliasGLM;
 //=============================================================================
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
+std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
     os << "[";
     for (size_t i = 0; i < vec.size(); ++i) {
         os << vec[i];
-        if (i < vec.size() - 1) { os << ", "; }
+        if (i < vec.size() - 1) {
+            os << ", ";
+        }
     }
     os << "]";
     return os;
@@ -624,44 +634,35 @@ i64 ElapsedTimer::elapsed() const {
 //=============================================================================
 
 Str str_lower(Str str) {
-    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+    std::transform(yItBEB(str), ::tolower);
     return str;
 }
 Str str_upper(Str str) {
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+    std::transform(yItBEB(str), ::toupper);
     return str;
 }
 Str str_capital(Str str) {
-    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
-    std::transform(str.begin(), str.begin() + 1, str.begin(), ::toupper);
+    std::transform(yItBEB(str), ::tolower);
+    std::transform(yItRng(str, 0, 1), yItB(str), ::toupper);
     return str;
 }
 
-b8 str_contains(Str const &str, Str const &substr) { return str.find(substr) < str.size(); }
+b8 str_contains(StrView str, StrView substr) { return str.find(substr) != std::string::npos; }
 
-Vec<Str> str_split(Str const & str, Str const & delimiter) {
+Vec<Str> str_split(StrView str, StrView delimiter) {
+    if (delimiter.empty())
+        return {};
 
     Vec<Str> splitted {};
+    usize ini = 0, end = 0;
 
-    if (delimiter.empty()) {
-        return splitted;
-    }
-
-    usize ini = 0;
-    usize end = 0;
-
-    // Split and store the string body
     while ((end = str.find(delimiter, ini)) < str.size()) {
-        auto const token = str.substr(ini, end - ini);
+        splitted.push_back(Str(str.substr(ini, end - ini)));
         ini = end + delimiter.size();
-        splitted.push_back(Str(token));
     }
 
-    // Store the string tail
-    if (ini < str.size()) {
-        auto const token = str.substr(ini);
-        splitted.push_back(Str(token));
-    }
+    if (ini < str.size())
+        splitted.push_back(Str(str.substr(ini)));
 
     return splitted;
 }
@@ -740,9 +741,8 @@ Str str_trim_r(Str str, Str const &individual_chars_to_remove) {
 
 Vec<u8> bin_read(Str const &path) {
     std::ifstream file { path, std::ios::binary };
-    auto file_begin = std::istreambuf_iterator<char>(file);
-    auto file_end = std::istreambuf_iterator<char>();
-    return { file_begin, file_end };
+    using FileIt = std::istreambuf_iterator<char>;
+    return { FileIt(file), FileIt() }; // Start, End
 }
 
 b8 bin_check_magic(SpanConst<u8> bin, SpanConst<u8> magic) {
@@ -813,11 +813,9 @@ b8 file_write_trunc(Str const &output_file, const char *data, usize data_size) {
     return file_write(output_file, data, data_size, std::ios::trunc);
 }
 
-b8 file_check_extension(Str const &input_file, Str ext) {
-    auto to_check = input_file.substr(input_file.find_last_of('.') + 1);
-    std::transform(to_check.begin(), to_check.end(), to_check.begin(), ::tolower);
-    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-    return to_check == ext;
+b8 file_check_extension(Str const &input_file, Str ext_ref) {
+    auto const ext = input_file.substr(input_file.find_last_of('.') + 1);
+    return str_lower(ext) == str_lower(ext_ref);
 }
 
 

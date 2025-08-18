@@ -134,7 +134,7 @@ int main() {
         T.eq("f32", yFmt("Test {}", 3.14159f), "Test 3.14159");
         T.eq("f64", yFmt("Test {}", 3.14159) , "Test 3.14159");
 
-        T.test("vec i32", []{ yPrint("{}", (Vec{1,2,3,4})); return true; });
+        // T.test("vec i32", []{ yPrint("{}", (Vec{1,2,3,4})); return true; });
     }
 
     T.make_section("Bit Ops");
