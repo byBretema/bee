@@ -403,6 +403,10 @@ using Span = std::span<T>;
 template <typename T>
 using SpanConst = std::span<const T>;
 
+// Chrono
+using Clock = std::chrono::high_resolution_clock;
+using TimePoint = Clock::time_point;
+
 } // namespace TypeAliasContainers
 using namespace TypeAliasContainers;
 
@@ -420,6 +424,14 @@ using Mat4 = glm::mat4;
 namespace TypeAliasGLM {} // namespace TypeAliasGLM
 #endif
 using namespace TypeAliasGLM;
+
+//--- Argparse ----------------------------------------------------------------
+
+#ifdef yyUseLibArgparse
+using CLI = argparse::ArgumentParser;
+[[nodiscard]] CLI &cli_init(Str const &title, Str const &version, Str const &description);
+[[nodiscard]] bool cli_parse(CLI &cli, int argc, char *argv[]);
+#endif
 
 //--- Time Consts -------------------------------------------------------------
 
@@ -439,17 +451,7 @@ inline constexpr f64 ns_to_s = 1e-9;
 inline constexpr f64 ns_to_ms = 1e-6;
 inline constexpr f64 ns_to_us = 1e-3;
 
-
-//--- Argparse ----------------------------------------------------------------
-
-#ifdef yyUseLibArgparse
-using CLI = argparse::ArgumentParser;
-[[nodiscard]] CLI &cli_init(Str const &title, Str const &version, Str const &description);
-[[nodiscard]] bool cli_parse(CLI &cli, int argc, char *argv[]);
-#endif
-
-
-//--- Elapsed Timer -------------------------------------------------------------
+//--- Time Utils --------------------------------------------------------------
 
 class ElapsedTimer {
 public:
@@ -464,12 +466,17 @@ private:
     [[nodiscard]] i64 elapsed() const;
 
 private:
-    using Clock = std::chrono::high_resolution_clock;
-    Clock::time_point m_ref = Clock::now();
+    TimePoint m_ref = Clock::now();
     b8 m_valid = false;
 };
 using ETimer = ElapsedTimer;
 
+Str time_stamp() {
+    auto const t = Clock::to_time_t(Clock::now());
+    std::ostringstream oss;
+    oss << std::put_time(std::localtime(&t), "%d-%m-%Y %H-%M-%S");
+    return oss.str();
+}
 
 //--- String Utils ------------------------------------------------------------
 
@@ -512,7 +519,7 @@ b8 file_write_trunc(Str const &output_file, const char *data, usize data_size);
 b8 file_check_extension(Str const &input_file, Str ext);
 
 
-//--- Math Utils ------------------------------------------------------------
+//--- Math Utils --------------------------------------------------------------
 
 [[nodiscard]] f32 map(f32 value, f32 src_min, f32 src_max, f32 dst_min, f32 dst_max);
 [[nodiscard]] f32 map_100(f32 value, f32 dst_min, f32 dst_max);
@@ -532,6 +539,92 @@ template <typename T>
 }
 #endif
 
+//--- Test Utils --------------------------------------------------------------
+
+class Tester {
+
+public:
+    void make_section(StrView name) { m_section = name; }
+
+    void ok(StrView title, bool c) {
+        test(title, [&] { return c; }, "Condition is false");
+    }
+
+    template <typename T1, typename T2>
+    void eq(StrView title, T1 const &lhs, T2 const &rhs) {
+        test(title, [&] { return lhs == rhs; }, yFmt("{} == {}", lhs, rhs));
+    }
+
+    template <typename T1, typename T2>
+    void gt(StrView title, T1 const &lhs, T2 const &rhs) {
+        test(title, [&] { return lhs > rhs; }, yFmt("{} > {}", lhs, rhs));
+    }
+
+    template <typename T1, typename T2>
+    void lt(StrView title, T1 const &lhs, T2 const &rhs) {
+        test(title, [&] { return lhs < rhs; }, yFmt("{} < {}", lhs, rhs));
+    }
+
+    template <typename T1, typename T2>
+    void gt_or_eq(StrView title, T1 const &lhs, T2 const &rhs) {
+        test(title, [&] { return lhs >= rhs; }, yFmt("{} >= {}", lhs, rhs));
+    }
+
+    template <typename T1, typename T2>
+    void lt_or_eq(StrView title, T1 const &lhs, T2 const &rhs) {
+        test(title, [&] { return lhs <= rhs; }, yFmt("{} <= {}", lhs, rhs));
+    }
+
+    void show_results() {
+        bool const done = m_pass_count == m_total_count;
+        yPrintln_("");
+
+        if (m_pass_count and not done)
+            yPrintln("✅ PASS  |  {} / {}", m_pass_count, m_total_count);
+
+        if (m_fail_count)
+            yPrintln("❌ FAIL  |  {} / {}", m_fail_count, m_total_count);
+
+        if (done)
+            yPrintln("🏁 DONE  |  {} / {}", m_pass_count, m_total_count);
+    }
+
+    void set_align_column(usize col) { m_align_col = std::clamp(col, 0ul, 255ul); }
+
+    void test(StrView title, Fn<bool()> fn, StrView msg = "") {
+        if (!fn) {
+            abort();
+        }
+        on_start();
+        try {
+            fn() ? on_passed() : on_failed(title, msg);
+        } catch (const std::exception &err) {
+            on_failed(title, yFmt("{} -- {}", err.what(), msg));
+        } catch (...) {
+            on_failed(title, yFmt("??? -- {}", msg));
+        }
+    }
+
+private:
+    void on_start() { ++m_total_count; }
+    void on_passed() { ++m_pass_count; }
+    void on_failed(StrView title, StrView msg) {
+        Str const msg_l = yFmt("⭕️ {} -> {}", m_section, title);
+        usize const sep_len = m_align_col > msg_l.size() ? m_align_col - msg_l.size() : 0ul;
+        Str const sep = Str(sep_len, ' ');
+        yPrintln("{}{}  |  {}", msg_l, sep, msg);
+        ++m_fail_count;
+    }
+
+    StrView m_section = "";
+
+    u32 m_total_count = 0;
+    u32 m_pass_count = 0;
+    u32 m_fail_count = 0;
+
+    usize m_align_col = 0;
+};
+
 } // namespace y
 
 
@@ -546,22 +639,22 @@ using namespace y::TypeAliasNumbers;
 using namespace y::TypeAliasGLM;
 #endif
 
-//=============================================================================
-//= Print Helpers
-//=============================================================================
+// //=============================================================================
+// //= Print Helpers
+// //=============================================================================
 
-template <typename T>
-std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
-    os << "[";
-    for (size_t i = 0; i < vec.size(); ++i) {
-        os << vec[i];
-        if (i < vec.size() - 1) {
-            os << ", ";
-        }
-    }
-    os << "]";
-    return os;
-}
+// template <typename T>
+// std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
+//     os << "[";
+//     for (size_t i = 0; i < vec.size(); ++i) {
+//         os << vec[i];
+//         if (i < vec.size() - 1) {
+//             os << ", ";
+//         }
+//     }
+//     os << "]";
+//     return os;
+// }
 
 #endif // _guard_y_header
 

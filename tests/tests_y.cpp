@@ -4,104 +4,9 @@
 #define yyExposeAliases
 #include "../src/y.h"
 
-namespace y {
-
-class Tester {
-
-public:
-    void make_section(StrView name) {
-        m_section = name;
-    }
-
-    void ok(StrView title, bool c) {
-        test(title, [&]{ return c; }, "Condition is false");
-    }
-
-    template <typename T1, typename T2>
-    void eq(StrView title, T1 const &lhs, T2 const &rhs) {
-        test(title, [&]{ return lhs == rhs; }, yFmt("{} == {}", lhs, rhs));
-    }
-
-    template <typename T1, typename T2>
-    void gt(StrView title, T1 const &lhs, T2 const &rhs) {
-        test(title, [&]{ return lhs > rhs; }, yFmt("{} > {}", lhs, rhs));
-    }
-
-    template <typename T1, typename T2>
-    void lt(StrView title, T1 const &lhs, T2 const &rhs) {
-        test(title, [&]{ return lhs < rhs; }, yFmt("{} < {}", lhs, rhs));
-    }
-
-    template <typename T1, typename T2>
-    void gt_or_eq(StrView title, T1 const &lhs, T2 const &rhs) {
-        test(title, [&]{ return lhs >= rhs; }, yFmt("{} >= {}", lhs, rhs));
-    }
-
-    template <typename T1, typename T2>
-    void lt_or_eq(StrView title, T1 const &lhs, T2 const &rhs) {
-        test(title, [&]{ return lhs <= rhs; }, yFmt("{} <= {}", lhs, rhs));
-    }
-
-    void show_results() {
-        bool const done = m_pass_count == m_total_count;
-        yPrintln_("");
-
-        if (m_pass_count and not done)
-            yPrintln("✅ PASS  |  {} / {}", m_pass_count, m_total_count);
-
-        if (m_fail_count)
-            yPrintln("❌ FAIL  |  {} / {}", m_fail_count, m_total_count);
-
-        if (done)
-            yPrintln("🏁 DONE  |  {} / {}", m_pass_count, m_total_count);
-    }
-
-    void set_align_column(usize col) {
-        m_align_col = std::clamp(col, 0ul, 255ul);
-    }
-
-    void test(StrView title, Fn<bool()> fn, StrView msg = "") {
-        if (!fn) { abort(); }
-        on_start();
-        try {
-            fn() ? on_passed() : on_failed(title, msg);
-        } catch (const std::exception &err) {
-            on_failed(title, yFmt("{} -- {}", err.what(), msg));
-        } catch (...) {
-            on_failed(title, yFmt("??? -- {}", msg));
-        }
-    }
-
-private:
-
-    void on_start() {
-        ++m_total_count;
-    }
-    void on_passed() {
-        ++m_pass_count;
-    }
-    void on_failed(StrView title, StrView msg) {
-        Str   const msg_l   = yFmt("⭕️ {} -> {}", m_section, title);
-        usize const sep_len = m_align_col > msg_l.size() ? m_align_col - msg_l.size() : 0ul;
-        Str   const sep     = Str(sep_len, ' ');
-        yPrintln("{}{}  |  {}", msg_l, sep, msg);
-        ++m_fail_count;
-    }
-
-    StrView m_section = "";
-
-    u32 m_total_count = 0;
-    u32 m_pass_count = 0;
-    u32 m_fail_count = 0;
-
-    usize m_align_col = 0;
-};
-
-} // namespace y
-
 int main() {
 
-    y::Tester T{};
+    y::Tester T {};
     T.set_align_column(42);
 
     T.make_section("Defer Ref");
@@ -129,10 +34,10 @@ int main() {
 
     T.make_section("Str Format");
     {
-        T.eq("Str", yFmt("Test {}", "String"), "Test String" );
-        T.eq("i32", yFmt("Test {}", 42)      , "Test 42"     );
+        T.eq("Str", yFmt("Test {}", "String"), "Test String");
+        T.eq("i32", yFmt("Test {}", 42), "Test 42");
         T.eq("f32", yFmt("Test {}", 3.14159f), "Test 3.14159");
-        T.eq("f64", yFmt("Test {}", 3.14159) , "Test 3.14159");
+        T.eq("f64", yFmt("Test {}", 3.14159), "Test 3.14159");
 
         // T.test("vec i32", []{ yPrint("{}", (Vec{1,2,3,4})); return true; });
     }
@@ -149,11 +54,11 @@ int main() {
     T.make_section("Cast Types");
     {
         T.eq("As i8 (clamp)", i8(3.14159), 3);
-        T.eq("As i8 (size)" , sizeof(i8 (3.14159)), sizeof(i8));
-        T.eq("As f32"       , sizeof(f32(3.14159)), sizeof(f32));
+        T.eq("As i8 (size)", sizeof(i8(3.14159)), sizeof(i8));
+        T.eq("As f32", sizeof(f32(3.14159)), sizeof(f32));
 
         i32 *heap_i = new i32(5);
-        T.ok("As void*", typeid(((void*)(heap_i))) == typeid(void *));
+        T.ok("As void*", typeid(((void *)(heap_i))) == typeid(void *));
         delete heap_i;
     }
 
@@ -264,7 +169,7 @@ int main() {
             Str const s = "1,2,3,4,5";
             Vec<Str> const s_res = { "1", "2", "3", "4", "5" };
             T.ok("Split", y::str_split(s, ",") == s_res);
-            T.ok("Join", y::str_join(s_res, ",") ==  s);
+            T.ok("Join", y::str_join(s_res, ",") == s);
         }
 
         {
@@ -285,22 +190,20 @@ int main() {
 
     T.make_section("Files Ops");
     {
-        Str const file_content = y::file_read("./to_file_read.txt");
-        Str const expected_content = "Test\nfile\nfor\nBEE\n";
-        T.eq("Read", file_content, expected_content);
+        T.eq("Read", y::file_read("./to_file_read.txt"),
+             "Test\nFile\nFor\nTesting\nFile\nReading\n");
 
-        auto const t = std::time(nullptr);
-        auto const tm = *std::localtime(&t);
-        std::ostringstream oss;
-        oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
-        Str const str = oss.str();
-        T.ok("Append", y::file_write_append("./to_file_append.txt", str + "\n"));
-        Str const append_content = y::file_read("./to_file_append.txt");
-        Vec<Str> const append_split = y::str_split(append_content, "\n");
-        T.eq("Append Validation", append_split[append_split.size() - 1], str);
+        {
+            auto const str = y::time_stamp();
+            T.ok("Append", y::file_write_append("./to_file_append.txt", str + "\n"));
+            Str const append_content = y::file_read("./to_file_append.txt");
+            Vec<Str> const append_split = y::str_split(append_content, "\n");
+            T.eq("Append Validation", append_split[append_split.size() - 1], str);
+        }
 
         Vec<u8> const bin { 'T', 'e', 's', 't', '\n', 'D', 'a', 't', 'a' };
-        T.ok("Write", y::file_write_trunc("./to_file_write.bin", (char const *)(bin.data()), bin.size()));
+        T.ok("Write",
+             y::file_write_trunc("./to_file_write.bin", (char const *)(bin.data()), bin.size()));
         T.ok("Write Validation", y::fs::exists("./to_file_write.bin"));
 
         auto const bin_content = y::bin_read("./to_file_write.bin");
@@ -323,12 +226,10 @@ int main() {
 //               << bee_bit(1) << " == " << true << "\n";
 // });
 // #if defined(BEE_USE_FAKE_FMT)
-// BENCH("Info (fakefmt)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1), true));
-// #elif defined(BEE_INCLUDE_FMT)
-// BENCH("Info (fmtlib)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1), true));
-// #else
-// BENCH("Info (apped)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1), true));
-// #endif
+// BENCH("Info (fakefmt)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1),
+// true)); #elif defined(BEE_INCLUDE_FMT) BENCH("Info (fmtlib)", BENCH_COUNT, bee_info("2 elevated
+// to {} is {} == {}", 1, bee_bit(1), true)); #else BENCH("Info (apped)", BENCH_COUNT, bee_info("2
+// elevated to {} is {} == {}", 1, bee_bit(1), true)); #endif
 
 // // String replacement
 // BENCH("Str Replace Many Unsorted", BENCH_COUNT,
