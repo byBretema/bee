@@ -170,7 +170,8 @@ std::string yFmt(std::string_view msg, Args... args) {
         }
 
         oss << msg.substr(0, curly_l);
-        oss << std::forward<decltype(arg)>(arg);
+        // oss << std::forward<decltype(arg)>(arg);
+        oss << arg;
 
         msg = msg.substr(curly_r + 1);
     };
@@ -204,6 +205,14 @@ std::string yFmt(std::string_view msg, Args... args) {
 //=============================================================================
 //= OTHER MACROS
 //=============================================================================
+
+//--- Variables ---------------------------------------------------------------
+
+#define yVar auto
+#define yLet auto const
+#define yLetx auto constexpr
+#define yLets auto constexpr static
+#define yLetm auto constexpr static inline
 
 //--- Iterators ---------------------------------------------------------------
 
@@ -510,11 +519,15 @@ Str time_stamp() {
 
 [[nodiscard]] Str file_read(Str const &input_file);
 
-b8 file_write_append(Str const &output_file, Str const &to_write);
-b8 file_write_trunc(Str const &output_file, Str const &to_write);
+b8 file_write(Str const &output_file, char const *data, usize data_size,
+              std::ios_base::openmode mode);
 
-b8 file_write_append(Str const &output_file, const char *data, usize data_size);
-b8 file_write_trunc(Str const &output_file, const char *data, usize data_size);
+inline b8 file_append(Str const &output_file, auto const &v) {
+    return file_write(output_file, (char const *)(v.data()), v.size(), std::ios::app);
+}
+inline b8 file_overwrite(Str const &output_file, auto const &v) {
+    return file_write(output_file, (char const *)(v.data()), v.size(), std::ios::trunc);
+}
 
 b8 file_check_extension(Str const &input_file, Str ext);
 
@@ -892,18 +905,6 @@ b8 file_write(Str const &output_file, char const *data, usize data_size,
     file.write(data, data_size);
 
     return true;
-}
-b8 file_write_append(Str const &output_file, Str const &to_write) {
-    return file_write(output_file, to_write.data(), to_write.size(), std::ios::app);
-}
-b8 file_write_trunc(Str const &output_file, Str const &to_write) {
-    return file_write(output_file, to_write.data(), to_write.size(), std::ios::trunc);
-}
-b8 file_write_append(Str const &output_file, const char *data, usize data_size) {
-    return file_write(output_file, data, data_size, std::ios::app);
-}
-b8 file_write_trunc(Str const &output_file, const char *data, usize data_size) {
-    return file_write(output_file, data, data_size, std::ios::trunc);
 }
 
 b8 file_check_extension(Str const &input_file, Str ext_ref) {

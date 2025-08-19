@@ -35,4 +35,4 @@ build/
 *.app
 
 # Executables
-test_output/
+tests/output/

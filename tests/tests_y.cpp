@@ -190,23 +190,30 @@ int main() {
 
     T.make_section("Files Ops");
     {
-        T.eq("Read", y::file_read("./to_file_read.txt"),
-             "Test\nFile\nFor\nTesting\nFile\nReading\n");
+        yLetx s_write_bin { "./output/to_file_write.bin" };
+        yLetx s_append_txt { "./output/to_file_append.txt" };
+        yLetx s_read_txt { "./input/to_file_read.txt" };
 
         {
-            auto const str = y::time_stamp();
-            T.ok("Append", y::file_write_append("./to_file_append.txt", str + "\n"));
-            Str const append_content = y::file_read("./to_file_append.txt");
-            Vec<Str> const append_split = y::str_split(append_content, "\n");
-            T.eq("Append Validation", append_split[append_split.size() - 1], str);
+            Str const content = y::file_read(s_read_txt);
+            Str const expected = "Test\nFile\nFor\nTesting\nFile\nReading\n";
+            T.eq("Read", content, expected);
+        }
+
+        {
+            Str const stamp = y::time_stamp();
+            T.ok("Append", y::file_append(s_append_txt, stamp + "\n"));
+
+            Str const content = y::file_read(s_append_txt);
+            Vec<Str> const split = y::str_split(content, "\n");
+            T.eq("Append > Read > Split", split[split.size() - 1], stamp);
         }
 
         Vec<u8> const bin { 'T', 'e', 's', 't', '\n', 'D', 'a', 't', 'a' };
-        T.ok("Write",
-             y::file_write_trunc("./to_file_write.bin", (char const *)(bin.data()), bin.size()));
-        T.ok("Write Validation", y::fs::exists("./to_file_write.bin"));
+        T.ok("Write", y::file_overwrite(s_write_bin, bin));
+        T.ok("Write Validation", y::fs::exists(s_write_bin));
 
-        auto const bin_content = y::bin_read("./to_file_write.bin");
+        auto const bin_content = y::bin_read(s_write_bin);
         Vec<u8> const magic { 'T', 'e', 's', 't' };
         T.ok("Magic", y::bin_check_magic(bin_content, magic));
 
