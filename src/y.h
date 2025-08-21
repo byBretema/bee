@@ -203,7 +203,7 @@ std::string yFmt(std::string_view msg, Args... args) {
 
 
 //=============================================================================
-//= OTHER MACROS
+//= QoL MACROS
 //=============================================================================
 
 //--- Variables ---------------------------------------------------------------
@@ -236,6 +236,21 @@ public:                                                                         
 
 #define yNoCopyNoMove(T) yNoCopy(T) yNoMove(T)
 
+//--- Concat ------------------------------------------------------------------
+
+#ifndef _yConcat
+#define _yConcat2(l, r) l##r
+#define _yConcat1(l, r) _yConcat2(l, r)
+#define _yConcat(l, r) _yConcat1(l, r)
+#endif
+
+//--- Defer -------------------------------------------------------------------
+
+#define _yDefer(fn) auto const _yConcat(__yDeferVar__, __LINE__) = bee::details::Defer(fn)
+
+#define yDefer(x) y::Defer _yConcat(y_defer_r_, __LINE__) { [&] { x; } };
+#define yDeferc(x) y::Defer _yConcat(y_defer_c_, __LINE__) { [=] { x; } };
+
 
 //=============================================================================
 //= NAMESPACE
@@ -243,42 +258,37 @@ public:                                                                         
 
 namespace y {
 
-//--- Defer -------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//                               HELPERs                                      //
+////////////////////////////////////////////////////////////////////////////////
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 template <typename T>
 struct Defer {
     Defer() = delete;
-    yNoCopyNoMove(Defer);
-    // Defer(Defer const &) = delete;
-    // Defer &operator=(Defer const &) = delete;
-    // Defer(Defer &&) noexcept = delete;
-    // Defer &operator=(Defer &&) noexcept = delete;
-    Defer(T &&cb) : m_cb(std::forward<T>(cb)) {}
-    ~Defer() { m_cb(); }
+    Defer(T &&callback) : m_callback(std::forward<T>(callback)) {}
+    ~Defer() { m_callback(); }
 
 private:
-    const T m_cb;
+    const T m_callback;
 };
-#define yDefer(x) y::Defer y_defer_var { [&] { x; } };
-#define yDeferc(x) y::Defer y_defer_var { [=] { x; } };
-
-//--- Bind Member -------------------------------------------------------------
-
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 template <typename F, typename T>
 auto bind(F &&fn, T *obj) {
     return [obj, fn](auto &&...args) -> decltype(auto) {
         return (obj->*fn)(std::forward<decltype(args)>(args)...);
     };
 }
-
-//--- Bit ---------------------------------------------------------------------
-
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 inline size_t bit(size_t n) { return (1 << n); }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-//--- Numbers Aliases ---------------------------------------------------------
 
+////////////////////////////////////////////////////////////////////////////////
+//                               ALIASES                                      //
+////////////////////////////////////////////////////////////////////////////////
 
-namespace TypeAliasNumbers {
+namespace AliasNum {
 
 // Bool
 
@@ -334,13 +344,10 @@ inline constexpr f64 f64_min = std::numeric_limits<f64>::min();
 inline constexpr f64 f64_max = std::numeric_limits<f64>::max();
 inline constexpr f64 f64_epsilon = std::numeric_limits<f64>::epsilon();
 
-} // namespace TypeAliasNumbers
-using namespace TypeAliasNumbers;
-
-
-//--- Pointers Aliases --------------------------------------------------------
-
-namespace TypeAliasPointers {
+} // namespace AliasNum
+using namespace AliasNum;
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+namespace AliasStl {
 
 // Unique pointer -- Do not use make_unique, it ignores custom-allocators
 template <typename T>
@@ -357,14 +364,6 @@ template <typename T, typename... Args>
 [[nodiscard]] constexpr Arc<T> arc_make(Args &&...args) {
     return Arc<T>(new T { args... });
 }
-
-} // namespace TypeAliasPointers
-using namespace TypeAliasPointers;
-
-
-//--- Containers Aliases --------------------------------------------------------
-
-namespace TypeAliasContainers {
 
 // Unordered Map
 template <typename K, typename V>
@@ -416,103 +415,272 @@ using SpanConst = std::span<const T>;
 using Clock = std::chrono::high_resolution_clock;
 using TimePoint = Clock::time_point;
 
-} // namespace TypeAliasContainers
-using namespace TypeAliasContainers;
-
-
-//--- GLM Aliases -------------------------------------------------------------
-
+} // namespace AliasStl
+using namespace AliasStl;
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+namespace AliasGlm {
 #ifdef yyUseLibGlm
-namespace TypeAliasGLM {
 using Vec2 = glm::vec2;
 using Vec3 = glm::vec3;
 using Vec4 = glm::vec4;
 using Mat4 = glm::mat4;
-} // namespace TypeAliasGLM
-#else
-namespace TypeAliasGLM {} // namespace TypeAliasGLM
 #endif
-using namespace TypeAliasGLM;
+} // namespace AliasGlm
+using namespace AliasGlm;
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-//--- Argparse ----------------------------------------------------------------
+
+////////////////////////////////////////////////////////////////////////////////
+//                              ARGPARSE                                      //
+////////////////////////////////////////////////////////////////////////////////
 
 #ifdef yyUseLibArgparse
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 using CLI = argparse::ArgumentParser;
-[[nodiscard]] CLI &cli_init(Str const &title, Str const &version, Str const &description);
-[[nodiscard]] bool cli_parse(CLI &cli, int argc, char *argv[]);
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] CLI &cli_init(Str const &title, Str const &version, Str const &description) {
+    static CLI cli { title, version };
+    static auto once = [&description] {
+        cli.add_description(description);
+        return 0;
+    }();
+    return cli;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] bool cli_parse(CLI &cli, int argc, char *argv[]) {
+    try {
+        cli.parse_args(argc, argv);
+        return true;
+    } catch (const std::exception &err) {
+        yPrintln("{}", err.what());
+        yPrintln("{}", cli.help().str());
+        return false;
+    } catch (...) {
+        yPrintln("{}", cli.help().str());
+        return false;
+    }
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #endif
 
-//--- Time Consts -------------------------------------------------------------
 
+////////////////////////////////////////////////////////////////////////////////
+//                                 TIME                                       //
+////////////////////////////////////////////////////////////////////////////////
+
+namespace Time {
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// From Secs
 inline constexpr f64 s_to_ms = 1e+3;
 inline constexpr f64 s_to_us = 1e+6;
 inline constexpr f64 s_to_ns = 1e+9;
-
+// From Ms
 inline constexpr f64 ms_to_s = 1e-3;
 inline constexpr f64 ms_to_us = 1e+3;
 inline constexpr f64 ms_to_ns = 1e+6;
-
+// From Us
 inline constexpr f64 us_to_s = 1e-6;
 inline constexpr f64 us_to_ms = 1e-3;
 inline constexpr f64 us_to_ns = 1e+3;
-
+// From Ns
 inline constexpr f64 ns_to_s = 1e-9;
 inline constexpr f64 ns_to_ms = 1e-6;
 inline constexpr f64 ns_to_us = 1e-3;
-
-//--- Time Utils --------------------------------------------------------------
-
-class ElapsedTimer {
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Elapsed {
 public:
-    void reset();
-    [[nodiscard]] f64 elapsed_s() const;
-    [[nodiscard]] f64 elapsed_ms() const;
-    [[nodiscard]] f64 elapsed_us() const;
-    [[nodiscard]] f64 elapsed_ns() const;
-    [[nodiscard]] b8 is_valid() const;
+    void reset() {
+        m_valid = true;
+        m_ref = Clock::now();
+    }
+
+    [[nodiscard]] f64 elapsed_s() const { return f64(elapsed()) * ns_to_s; }
+    [[nodiscard]] f64 elapsed_ms() const { return f64(elapsed()) * ns_to_ms; }
+    [[nodiscard]] f64 elapsed_us() const { return f64(elapsed()) * ns_to_us; }
+    [[nodiscard]] f64 elapsed_ns() const { return f64(elapsed()); }
+
+    [[nodiscard]] b8 is_valid() const { return m_valid; }
 
 private:
-    [[nodiscard]] i64 elapsed() const;
+    [[nodiscard]] i64 elapsed() const {
+        yLet now = Clock::now();
+        yLet diff = now - m_ref;
+        using timeunit = std::chrono::nanoseconds;
+        return std::chrono::duration_cast<timeunit>(diff).count();
+    }
 
-private:
     TimePoint m_ref = Clock::now();
     b8 m_valid = false;
 };
-using ETimer = ElapsedTimer;
-
-Str time_stamp() {
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Str stamp() {
     auto const t = Clock::to_time_t(Clock::now());
     std::ostringstream oss;
     oss << std::put_time(std::localtime(&t), "%d-%m-%Y %H-%M-%S");
     return oss.str();
 }
-
-//--- String Utils ------------------------------------------------------------
-
-[[nodiscard]] Str str_lower(Str str);
-[[nodiscard]] Str str_upper(Str str);
-[[nodiscard]] Str str_capital(Str str);
-
-[[nodiscard]] b8 str_contains(StrView str, StrView substr);
-[[nodiscard]] Vec<Str> str_split(StrView str, StrView delimeter);
-[[nodiscard]] Str str_join(Vec<Str> const &strlist, Str const &delimeter);
-[[nodiscard]] Str str_replace(Str str, Str const &from, Str const &to, b8 only_first_match = false);
-[[nodiscard]] Str str_replace_many(Str str, Vec<Str> const &from, Vec<Str> const &to,
-                                   b8 sorted = false);
-
-[[nodiscard]] Str str_cut(Str const &str, i32 count);
-[[nodiscard]] Str str_cut_l(Str const &str, i32 count);
-[[nodiscard]] Str str_cut_r(Str const &str, i32 count);
-
-[[nodiscard]] Str str_trim(Str str, Str const &individual_chars_to_remove = " \n\r\t");
-[[nodiscard]] Str str_trim_l(Str str, Str const &individual_chars_to_remove = " \n\r\t");
-[[nodiscard]] Str str_trim_r(Str str, Str const &individual_chars_to_remove = " \n\r\t");
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+} // namespace Time
+using ETimer = Time::Elapsed;
 
 
-//--- Binary Utils ------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//                               STRINGS                                      //
+////////////////////////////////////////////////////////////////////////////////
 
-[[nodiscard]] Vec<u8> bin_read(Str const &path);
-[[nodiscard]] b8 bin_check_magic(SpanConst<u8> bin, SpanConst<u8> magic);
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_lower(Str str) {
+    std::transform(yItBEB(str), ::tolower);
+    return str;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_upper(Str str) {
+    std::transform(yItBEB(str), ::toupper);
+    return str;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_capital(Str str) {
+    std::transform(yItBEB(str), ::tolower);
+    std::transform(yItRng(str, 0, 1), yItB(str), ::toupper);
+    return str;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] b8 str_contains(StrView str, StrView substr) {
+    return str.find(substr) != std::string::npos;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Vec<Str> str_split(StrView str, StrView delim) {
+    if (delim.empty()) {
+        return {};
+    }
+
+    Vec<Str> splitted {};
+    usize ini = 0, end = 0;
+
+    while ((end = str.find(delim, ini)) < str.size()) {
+        splitted.push_back(Str(str.substr(ini, end - ini)));
+        ini = end + delim.size();
+    }
+
+    if (ini < str.size())
+        splitted.push_back(Str(str.substr(ini)));
+
+    return splitted;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_join(Vec<Str> const &strlist, StrView delim) {
+    if (strlist.empty() || delim.empty()) {
+        return "";
+    }
+
+    Str s;
+    s.reserve(strlist.size() + (delim.size() * strlist.size() + 4));
+
+    for (usize i = 0; i < strlist.size() - 1; ++i) {
+        s += yFmt("{}{}", strlist[i], delim);
+    }
+    s += strlist[strlist.size() - 1];
+
+    return s;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_replace(Str str, Str const &from, Str const &to,
+                              b8 only_first_match = false) {
+    usize pos = 0;
+    while ((pos = str.find(from)) < str.size()) {
+        str.replace(pos, from.length(), to);
+        if (only_first_match) {
+            break;
+        }
+    }
+    return str;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_replace_many(Str str, Vec<Str> const &from, //
+                                   Vec<Str> const &to, b8 sorted = false) {
+
+    b8 const same_size = from.size() == to.size();
+    b8 const is_empty = same_size && from.size() < 1;
+    if (!same_size || is_empty) {
+        yWarn("str_replace_many - {}", "Bad sizes. Returned original str");
+        return str;
+    }
+
+    usize pos = 0;
+    usize i = 0;
+
+    usize anchor = 0;
+    while (i < from.size() && (pos = str.find(from[i], anchor)) < str.size()) {
+        str.replace(pos, from[i].length(), to[i]);
+        if (sorted) {
+            anchor = pos;
+        }
+        ++i;
+    }
+    return str;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_slice(Str const &str, usize from, usize to) {
+    if (to < 1 || to < from || to >= str.size()) {
+        yWarn("str_slice / str_cut - {}", "Bad range. Returned original str");
+        return str;
+    }
+    return str.substr(from, to);
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_cut(Str const &str, usize count) { //
+    return str_slice(str, count, count);
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_cut_l(Str const &str, usize count) { //
+    return str_slice(str, count, str.size());
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_cut_r(Str const &str, usize count) { //
+    return str_slice(str, 0, count);
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_trim(Str str, Str const &individual_chars_to_remove = " \n\r\t") {
+    auto const l = str_trim_l(str, individual_chars_to_remove);
+    return str_trim_r(l, individual_chars_to_remove);
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_trim_l(Str str, Str const &individual_chars_to_remove = " \n\r\t") {
+    return str.erase(0, str.find_first_not_of(individual_chars_to_remove));
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str str_trim_r(Str str, Str const &individual_chars_to_remove = " \n\r\t") {
+    return str.erase(str.find_last_not_of(individual_chars_to_remove) + 1);
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+
+////////////////////////////////////////////////////////////////////////////////
+//                                BINARY                                      //
+////////////////////////////////////////////////////////////////////////////////
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Vec<u8> bin_read(Str const &path) {
+    std::ifstream file { path, std::ios::binary };
+    using FileIt = std::istreambuf_iterator<char>;
+    return { FileIt(file), FileIt() }; // Start, End
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] b8 bin_check_magic(SpanConst<u8> bin, SpanConst<u8> magic) {
+    // Validation
+    if (magic.empty() || bin.size() < magic.size()) {
+        return false;
+    }
+    // Iteration
+    b8 match = true;
+    for (usize i = 0; i < magic.size(); ++i) {
+        match &= (bin[i] == magic[i]);
+    }
+    // Result
+    return match;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
 //--- Files Utils -------------------------------------------------------------
@@ -646,10 +814,9 @@ private:
 //=============================================================================
 
 #ifdef yyExposeAliases
-using namespace y::TypeAliasContainers;
-using namespace y::TypeAliasPointers;
-using namespace y::TypeAliasNumbers;
-using namespace y::TypeAliasGLM;
+using namespace y::AliasStl;
+using namespace y::AliasNum;
+using namespace y::AliasGlm;
 #endif
 
 // //=============================================================================
@@ -682,189 +849,6 @@ using namespace y::TypeAliasGLM;
 
 namespace y {
 namespace fs = std::filesystem;
-
-
-//=============================================================================
-//= Argparse
-//=============================================================================
-
-#ifdef yyUseLibArgparse
-
-CLI &cli_init(Str const &title, Str const &version, Str const &description) {
-    static CLI cli { title, version };
-    static auto once = [&description] {
-        cli.add_description(description);
-        return 0;
-    }();
-    return cli;
-}
-
-bool cli_parse(CLI &cli, int argc, char *argv[]) {
-    try {
-        cli.parse_args(argc, argv);
-        return true;
-    } catch (const std::exception &err) {
-        yPrintln("{}", err.what());
-        yPrintln("{}", cli.help().str());
-        return false;
-    } catch (...) {
-        yPrintln("{}", cli.help().str());
-        return false;
-    }
-}
-
-#endif
-
-
-//=============================================================================
-//= Elapsed Timer
-//=============================================================================
-
-void ElapsedTimer::reset() {
-    m_valid = true;
-    m_ref = Clock::now();
-}
-f64 ElapsedTimer::elapsed_s() const { return f64(elapsed()) * ns_to_s; }
-f64 ElapsedTimer::elapsed_ms() const { return f64(elapsed()) * ns_to_ms; }
-f64 ElapsedTimer::elapsed_us() const { return f64(elapsed()) * ns_to_us; }
-f64 ElapsedTimer::elapsed_ns() const { return f64(elapsed()); }
-b8 ElapsedTimer::is_valid() const { return m_valid; }
-i64 ElapsedTimer::elapsed() const {
-    auto const now = Clock::now();
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(now - m_ref).count();
-}
-
-
-//=============================================================================
-//= String Utils
-//=============================================================================
-
-Str str_lower(Str str) {
-    std::transform(yItBEB(str), ::tolower);
-    return str;
-}
-Str str_upper(Str str) {
-    std::transform(yItBEB(str), ::toupper);
-    return str;
-}
-Str str_capital(Str str) {
-    std::transform(yItBEB(str), ::tolower);
-    std::transform(yItRng(str, 0, 1), yItB(str), ::toupper);
-    return str;
-}
-
-b8 str_contains(StrView str, StrView substr) { return str.find(substr) != std::string::npos; }
-
-Vec<Str> str_split(StrView str, StrView delimiter) {
-    if (delimiter.empty())
-        return {};
-
-    Vec<Str> splitted {};
-    usize ini = 0, end = 0;
-
-    while ((end = str.find(delimiter, ini)) < str.size()) {
-        splitted.push_back(Str(str.substr(ini, end - ini)));
-        ini = end + delimiter.size();
-    }
-
-    if (ini < str.size())
-        splitted.push_back(Str(str.substr(ini)));
-
-    return splitted;
-}
-
-Str str_join(Vec<Str> const &strlist, Str const &delimeter) {
-
-    if (strlist.empty()) {
-        return "";
-    }
-
-    Str s;
-    for (usize i = 0; i < strlist.size() - 1; ++i) {
-        s += strlist[i] + delimeter;
-    }
-    s += strlist[strlist.size() - 1];
-
-    return s;
-}
-
-Str str_replace(Str str, Str const &from, Str const &to, b8 only_first_match) {
-    usize pos = 0;
-    while ((pos = str.find(from)) < str.size()) {
-        str.replace(pos, from.length(), to);
-        if (only_first_match) {
-            break;
-        }
-    }
-    return str;
-}
-
-Str str_replace_many(Str str, Vec<Str> const &from, Vec<Str> const &to, b8 sorted) {
-
-    b8 const same_size = from.size() == to.size();
-    b8 const is_empty = same_size && from.size() < 1;
-    if (!same_size || is_empty) {
-        // assert(same_size);
-        yWarn("str_replace_many - {}", "Bad sizes");
-        return str;
-    }
-
-    usize pos = 0;
-    usize i = 0;
-
-    usize anchor = 0;
-    while (i < from.size() && (pos = str.find(from[i], anchor)) < str.size()) {
-        str.replace(pos, from[i].length(), to[i]);
-        if (sorted) {
-            anchor = pos;
-        }
-        ++i;
-    }
-    return str;
-}
-
-Str str_cut(Str const &str, i32 count) { return str_cut_r(str_cut_l(str, count), count); }
-Str str_cut_l(Str const &str, i32 count) { return str.substr(count); }
-Str str_cut_r(Str const &str, i32 count) {
-    return str.substr(0, std::max(i32(str.size()) - count, count));
-}
-
-Str str_trim(Str str, Str const &individual_chars_to_remove) {
-    auto const l = str_trim_l(str, individual_chars_to_remove);
-    return str_trim_r(l, individual_chars_to_remove);
-}
-Str str_trim_l(Str str, Str const &individual_chars_to_remove) {
-    return str.erase(0, str.find_first_not_of(individual_chars_to_remove));
-}
-Str str_trim_r(Str str, Str const &individual_chars_to_remove) {
-    return str.erase(str.find_last_not_of(individual_chars_to_remove) + 1);
-}
-
-
-//=============================================================================
-//= Binary Utils
-//=============================================================================
-
-Vec<u8> bin_read(Str const &path) {
-    std::ifstream file { path, std::ios::binary };
-    using FileIt = std::istreambuf_iterator<char>;
-    return { FileIt(file), FileIt() }; // Start, End
-}
-
-b8 bin_check_magic(SpanConst<u8> bin, SpanConst<u8> magic) {
-    // Validation
-    if (magic.empty() || bin.size() < magic.size()) {
-        return false;
-    }
-    // Iteration
-    b8 match = true;
-    for (usize i = 0; i < magic.size(); ++i) {
-        match &= (bin[i] == magic[i]);
-    }
-    // Result
-    return match;
-}
-
 
 //=============================================================================
 //= Files Utils
