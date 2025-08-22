@@ -3,7 +3,7 @@
 #define yyUseCustomFmt
 #define yyExposeAliases
 #define yyEnableTesting
-#include "../src/y.h"
+#include "../src/y.hpp"
 
 int main() {
 
