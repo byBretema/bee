@@ -1,9 +1,8 @@
+#pragma once
+
 /* y - v0.0.1
 
     Some C++ aliases, helpers and wrappers repeated along different projects.
-
-    #define yyDEFINITION
-        Type this before including y.h:
 
     #define yyExposeAliases
         Expose aliases defined in 'y' namespace :
@@ -23,6 +22,12 @@
         Include simplistic fmt-like custom implementation.
         It could be undefined by 'yyUseLibFmt'
 
+    #define yyEnableTesting
+        Include a class to easily run Tests.
+
+    #define yyEnableBenchmarking
+        Include a class to easily run Benchmarks.
+
     Used conventions:
     - camelCase  : Macros             : Prefix 'y'
     - camelCase  : Defines            : Prefix 'yy'
@@ -36,14 +41,9 @@
 // See complete details at https://www.boost.org/LICENSE_1_0.txt
 
 
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-#ifndef _guard_y_header
-#define _guard_y_header
-
-//=============================================================================
+//==============================================================================
 //= INCLUDES
-//=============================================================================
+//==============================================================================
 
 //--- STD ---------------------------------------------------------------------
 
@@ -54,6 +54,7 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iso646.h>
 #include <limits>
@@ -118,9 +119,9 @@
 #define glmstr(x) glm::to_string(x)
 #endif
 
-//=============================================================================
+//==============================================================================
 //= FORMAT and PRINT
-//=============================================================================
+//==============================================================================
 
 #ifdef yyUseLibFmt //!! Using fmtlib
 #undef yyUseCustomFmt
@@ -202,9 +203,9 @@ std::string yFmt(std::string_view msg, Args... args) {
 #define yDbg(msg, ...) yLog("DEBG", (msg), __VA_ARGS__)
 
 
-//=============================================================================
+//==============================================================================
 //= QoL MACROS
-//=============================================================================
+//==============================================================================
 
 //--- Variables ---------------------------------------------------------------
 
@@ -252,11 +253,12 @@ public:                                                                         
 #define yDeferc(x) y::Defer _yConcat(y_defer_c_, __LINE__) { [=] { x; } };
 
 
-//=============================================================================
+//==============================================================================
 //= NAMESPACE
-//=============================================================================
+//==============================================================================
 
 namespace y {
+namespace fs = std::filesystem;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                               HELPERs                                      //
@@ -353,7 +355,7 @@ namespace AliasStl {
 template <typename T>
 using Box = std::unique_ptr<T>;
 template <typename T, typename... Args>
-[[nodiscard]] constexpr Box<T> box_make(Args &&...args) {
+[[nodiscard]] inline constexpr Box<T> make_box(Args &&...args) {
     return Box<T>(new T { args... });
 }
 
@@ -361,7 +363,7 @@ template <typename T, typename... Args>
 template <typename T>
 using Arc = std::shared_ptr<T>;
 template <typename T, typename... Args>
-[[nodiscard]] constexpr Arc<T> arc_make(Args &&...args) {
+[[nodiscard]] inline constexpr Arc<T> make_arc(Args &&...args) {
     return Arc<T>(new T { args... });
 }
 
@@ -434,6 +436,7 @@ using namespace AliasGlm;
 //                              ARGPARSE                                      //
 ////////////////////////////////////////////////////////////////////////////////
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #ifdef yyUseLibArgparse
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 using CLI = argparse::ArgumentParser;
@@ -462,13 +465,12 @@ using CLI = argparse::ArgumentParser;
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #endif
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                 TIME                                       //
 ////////////////////////////////////////////////////////////////////////////////
-
-namespace Time {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // From Secs
@@ -488,41 +490,48 @@ inline constexpr f64 ns_to_s = 1e-9;
 inline constexpr f64 ns_to_ms = 1e-6;
 inline constexpr f64 ns_to_us = 1e-3;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Elapsed {
+class ElapsedTimer {
 public:
+    //--------------------------------------------------------------------------
+    [[nodiscard]] f64 elapsed_s() const { return f64(elapsed()) * ns_to_s; }
+    //--------------------------------------------------------------------------
+    [[nodiscard]] f64 elapsed_ms() const { return f64(elapsed()) * ns_to_ms; }
+    //--------------------------------------------------------------------------
+    [[nodiscard]] f64 elapsed_us() const { return f64(elapsed()) * ns_to_us; }
+    //--------------------------------------------------------------------------
+    [[nodiscard]] f64 elapsed_ns() const { return f64(elapsed()); }
+    //--------------------------------------------------------------------------
+    [[nodiscard]] b8 is_valid() const { return m_valid; }
+    //--------------------------------------------------------------------------
     void reset() {
         m_valid = true;
         m_ref = Clock::now();
     }
-
-    [[nodiscard]] f64 elapsed_s() const { return f64(elapsed()) * ns_to_s; }
-    [[nodiscard]] f64 elapsed_ms() const { return f64(elapsed()) * ns_to_ms; }
-    [[nodiscard]] f64 elapsed_us() const { return f64(elapsed()) * ns_to_us; }
-    [[nodiscard]] f64 elapsed_ns() const { return f64(elapsed()); }
-
-    [[nodiscard]] b8 is_valid() const { return m_valid; }
+    //--------------------------------------------------------------------------
 
 private:
+    //--------------------------------------------------------------------------
     [[nodiscard]] i64 elapsed() const {
         yLet now = Clock::now();
         yLet diff = now - m_ref;
         using timeunit = std::chrono::nanoseconds;
         return std::chrono::duration_cast<timeunit>(diff).count();
     }
-
+    //--------------------------------------------------------------------------
     TimePoint m_ref = Clock::now();
     b8 m_valid = false;
+    //--------------------------------------------------------------------------
 };
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Str stamp() {
+Str inline time_stamp() {
     auto const t = Clock::to_time_t(Clock::now());
     std::ostringstream oss;
     oss << std::put_time(std::localtime(&t), "%d-%m-%Y %H-%M-%S");
     return oss.str();
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-} // namespace Time
-using ETimer = Time::Elapsed;
+using ETimer = ElapsedTimer;
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -530,23 +539,23 @@ using ETimer = Time::Elapsed;
 ////////////////////////////////////////////////////////////////////////////////
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] Str str_lower(Str str) {
+[[nodiscard]] inline Str str_lower(Str str) {
     std::transform(yItBEB(str), ::tolower);
     return str;
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] Str str_upper(Str str) {
+[[nodiscard]] inline Str str_upper(Str str) {
     std::transform(yItBEB(str), ::toupper);
     return str;
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] Str str_capital(Str str) {
+[[nodiscard]] inline Str str_capital(Str str) {
     std::transform(yItBEB(str), ::tolower);
     std::transform(yItRng(str, 0, 1), yItB(str), ::toupper);
     return str;
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] b8 str_contains(StrView str, StrView substr) {
+[[nodiscard]] inline b8 str_contains(StrView str, StrView substr) {
     return str.find(substr) != std::string::npos;
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -599,7 +608,6 @@ using ETimer = Time::Elapsed;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 [[nodiscard]] Str str_replace_many(Str str, Vec<Str> const &from, //
                                    Vec<Str> const &to, b8 sorted = false) {
-
     b8 const same_size = from.size() == to.size();
     b8 const is_empty = same_size && from.size() < 1;
     if (!same_size || is_empty) {
@@ -609,7 +617,6 @@ using ETimer = Time::Elapsed;
 
     usize pos = 0;
     usize i = 0;
-
     usize anchor = 0;
     while (i < from.size() && (pos = str.find(from[i], anchor)) < str.size()) {
         str.replace(pos, from[i].length(), to[i]);
@@ -621,37 +628,37 @@ using ETimer = Time::Elapsed;
     return str;
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] Str str_slice(Str const &str, usize from, usize to) {
-    if (to < 1 || to < from || to >= str.size()) {
+[[nodiscard]] inline Str str_slice(Str const &str, usize from, usize to) {
+    if (to < 1 || to < from || to > str.size()) {
         yWarn("str_slice / str_cut - {}", "Bad range. Returned original str");
         return str;
     }
     return str.substr(from, to);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] Str str_cut(Str const &str, usize count) { //
-    return str_slice(str, count, count);
+[[nodiscard]] inline Str str_cut(Str const &str, usize count) { //
+    return str_slice(str, count, str.size() - count * 2);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] Str str_cut_l(Str const &str, usize count) { //
+[[nodiscard]] inline Str str_cut_l(Str const &str, usize count) { //
     return str_slice(str, count, str.size());
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] Str str_cut_r(Str const &str, usize count) { //
-    return str_slice(str, 0, count);
+[[nodiscard]] inline Str str_cut_r(Str const &str, usize count) { //
+    return str_slice(str, 0, str.size() - count);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] Str str_trim(Str str, Str const &individual_chars_to_remove = " \n\r\t") {
-    auto const l = str_trim_l(str, individual_chars_to_remove);
-    return str_trim_r(l, individual_chars_to_remove);
-}
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] Str str_trim_l(Str str, Str const &individual_chars_to_remove = " \n\r\t") {
+[[nodiscard]] inline Str str_trim_l(Str str, Str const &individual_chars_to_remove = " \n\r\t") {
     return str.erase(0, str.find_first_not_of(individual_chars_to_remove));
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] Str str_trim_r(Str str, Str const &individual_chars_to_remove = " \n\r\t") {
+[[nodiscard]] inline Str str_trim_r(Str str, Str const &individual_chars_to_remove = " \n\r\t") {
     return str.erase(str.find_last_not_of(individual_chars_to_remove) + 1);
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] inline Str str_trim(Str str, Str const &individual_chars_to_remove = " \n\r\t") {
+    auto const l = str_trim_l(str, individual_chars_to_remove);
+    return str_trim_r(l, individual_chars_to_remove);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -661,7 +668,7 @@ using ETimer = Time::Elapsed;
 ////////////////////////////////////////////////////////////////////////////////
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] Vec<u8> bin_read(Str const &path) {
+[[nodiscard]] inline Vec<u8> bin_read(Str const &path) {
     std::ifstream file { path, std::ios::binary };
     using FileIt = std::istreambuf_iterator<char>;
     return { FileIt(file), FileIt() }; // Start, End
@@ -683,79 +690,151 @@ using ETimer = Time::Elapsed;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
-//--- Files Utils -------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//                                 FILEs                                      //
+////////////////////////////////////////////////////////////////////////////////
 
-[[nodiscard]] Str file_read(Str const &input_file);
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] Str file_read(Str const &input_file) {
+    std::ifstream file(input_file, std::ios::ate | std::ios::binary);
+    yDefer(file.close());
 
+    if (!file.is_open()) {
+        yWarn("[file_read] Opening file: {}. Returned empty str", input_file);
+        return "";
+    }
+
+    Str content;
+    content.resize(file.tellg());
+    file.seekg(0, std::ios::beg);
+    file.read(&content[0], content.size());
+
+    return content;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 b8 file_write(Str const &output_file, char const *data, usize data_size,
-              std::ios_base::openmode mode);
+              std::ios_base::openmode mode) {
+    if (!data || data_size < 1) {
+        return false;
+        yErr("[file_write] Invalid data: {}", output_file);
+    }
 
+    std::ofstream file(output_file, std::ios::out | std::ios::binary | mode);
+    yDefer(file.close());
+
+    if (!file.is_open()) {
+        return false;
+        yErr("[file_write] Opening file: {}", output_file);
+    }
+
+    file.write(data, data_size);
+
+    return true;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 inline b8 file_append(Str const &output_file, auto const &v) {
     return file_write(output_file, (char const *)(v.data()), v.size(), std::ios::app);
-}
+} // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 inline b8 file_overwrite(Str const &output_file, auto const &v) {
     return file_write(output_file, (char const *)(v.data()), v.size(), std::ios::trunc);
 }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+inline b8 file_check_extension(Str const &input_file, Str ext_ref) {
+    auto const ext = input_file.substr(input_file.find_last_of('.') + 1);
+    return str_lower(ext) == str_lower(ext_ref);
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-b8 file_check_extension(Str const &input_file, Str ext);
 
+////////////////////////////////////////////////////////////////////////////////
+//                                 MATHs                                      //
+////////////////////////////////////////////////////////////////////////////////
 
-//--- Math Utils --------------------------------------------------------------
-
-[[nodiscard]] f32 map(f32 value, f32 src_min, f32 src_max, f32 dst_min, f32 dst_max);
-[[nodiscard]] f32 map_100(f32 value, f32 dst_min, f32 dst_max);
-
-[[nodiscard]] b8 fuzzy_eq(f32 f1, f32 f2, f32 threshold = 0.01f);
-
-[[nodiscard]] f32 clamp_angle(f32 angle);
-
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] inline f32 map(f32 value, f32 src_min, f32 src_max, f32 dst_min, f32 dst_max) {
+    return dst_min + (dst_max - dst_min) * (value - src_min) / (src_max - src_min);
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] inline f32 map_100(f32 value, f32 dst_min, f32 dst_max) {
+    return map(value, 0, 100, dst_min, dst_max);
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] inline b8 fuzzy_eq(f32 f1, f32 f2, f32 threshold = 0.01f) {
+    auto const diff = abs(f1 - f2);
+    auto const is_eq = diff <= threshold;
+    return is_eq;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] inline f32 clamp_angle(f32 angle) {
+    auto const turns = floorf(angle / 360.f);
+    return angle - 360.f * turns;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #ifdef yyUseLibGlm
-[[nodiscard]] b8 fuzzy_eq(Vec2 const &v1, Vec2 const &v2, f32 t = 0.01f);
-[[nodiscard]] b8 fuzzy_eq(Vec3 const &v1, Vec3 const &v2, f32 t = 0.01f);
-[[nodiscard]] b8 fuzzy_eq(Vec4 const &v1, Vec4 const &v2, f32 t = 0.01f);
-
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] inline b8 fuzzy_eq(Vec2 const &v1, Vec2 const &v2, f32 t = 0.01f) {
+    return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t);
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] inline b8 fuzzy_eq(Vec3 const &v1, Vec3 const &v2, f32 t = 0.01f) {
+    return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t) && fuzzy_eq(v1.z, v2.z, t);
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] inline b8 fuzzy_eq(Vec4 const &v1, Vec4 const &v2, f32 t = 0.01f) {
+    return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t) && //
+           fuzzy_eq(v1.z, v2.z, t) && fuzzy_eq(v1.w, v2.w, t);
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 template <typename T>
 [[nodiscard]] inline b8 is_aligned(T const &a, T const &b, f32 margin = 0.01f) {
     return abs(glm::dot(glm::normalize(a), glm::normalize(b))) >= (1.f - f32_epsilon - margin);
 }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #endif
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-//--- Test Utils --------------------------------------------------------------
 
-class Tester {
+#ifdef yyEnableTesting
+////////////////////////////////////////////////////////////////////////////////
+//                                 TESTs                                      //
+////////////////////////////////////////////////////////////////////////////////
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Test {
 
 public:
+    //--------------------------------------------------------------------------
     void make_section(StrView name) { m_section = name; }
-
+    //--------------------------------------------------------------------------
     void ok(StrView title, bool c) {
         test(title, [&] { return c; }, "Condition is false");
     }
-
+    //--------------------------------------------------------------------------
     template <typename T1, typename T2>
     void eq(StrView title, T1 const &lhs, T2 const &rhs) {
         test(title, [&] { return lhs == rhs; }, yFmt("{} == {}", lhs, rhs));
     }
-
+    //--------------------------------------------------------------------------
     template <typename T1, typename T2>
     void gt(StrView title, T1 const &lhs, T2 const &rhs) {
         test(title, [&] { return lhs > rhs; }, yFmt("{} > {}", lhs, rhs));
     }
-
+    //--------------------------------------------------------------------------
     template <typename T1, typename T2>
     void lt(StrView title, T1 const &lhs, T2 const &rhs) {
         test(title, [&] { return lhs < rhs; }, yFmt("{} < {}", lhs, rhs));
     }
-
+    //--------------------------------------------------------------------------
     template <typename T1, typename T2>
     void gt_or_eq(StrView title, T1 const &lhs, T2 const &rhs) {
         test(title, [&] { return lhs >= rhs; }, yFmt("{} >= {}", lhs, rhs));
     }
-
+    //--------------------------------------------------------------------------
     template <typename T1, typename T2>
     void lt_or_eq(StrView title, T1 const &lhs, T2 const &rhs) {
         test(title, [&] { return lhs <= rhs; }, yFmt("{} <= {}", lhs, rhs));
     }
-
+    //--------------------------------------------------------------------------
     void show_results() {
         bool const done = m_pass_count == m_total_count;
         yPrintln_("");
@@ -769,9 +848,9 @@ public:
         if (done)
             yPrintln("🏁 DONE  |  {} / {}", m_pass_count, m_total_count);
     }
-
+    //--------------------------------------------------------------------------
     void set_align_column(usize col) { m_align_col = std::clamp(col, 0ul, 255ul); }
-
+    //--------------------------------------------------------------------------
     void test(StrView title, Fn<bool()> fn, StrView msg = "") {
         if (!fn) {
             abort();
@@ -785,10 +864,14 @@ public:
             on_failed(title, yFmt("??? -- {}", msg));
         }
     }
+    //--------------------------------------------------------------------------
 
 private:
+    //--------------------------------------------------------------------------
     void on_start() { ++m_total_count; }
+    //--------------------------------------------------------------------------
     void on_passed() { ++m_pass_count; }
+    //--------------------------------------------------------------------------
     void on_failed(StrView title, StrView msg) {
         Str const msg_l = yFmt("⭕️ {} -> {}", m_section, title);
         usize const sep_len = m_align_col > msg_l.size() ? m_align_col - msg_l.size() : 0ul;
@@ -796,144 +879,60 @@ private:
         yPrintln("{}{}  |  {}", msg_l, sep, msg);
         ++m_fail_count;
     }
-
+    //--------------------------------------------------------------------------
     StrView m_section = "";
-
     u32 m_total_count = 0;
     u32 m_pass_count = 0;
     u32 m_fail_count = 0;
-
     usize m_align_col = 0;
+    //--------------------------------------------------------------------------
 };
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#endif
+
+
+#ifdef yyEnableBenchmarking
+////////////////////////////////////////////////////////////////////////////////
+//                              BENCHMARKS                                    //
+////////////////////////////////////////////////////////////////////////////////
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+namespace _yBenchmarkDetails {
+inline static FILE *stdout_file = nullptr;
+void stdout_off() {
+    std::fflush(stdout);
+#ifdef _WIN32
+    stdout_file = freopen("NUL", "w", stdout);
+#else
+    stdout_file = freopen("/dev/null", "w", stdout);
+#endif
+}
+void stdout_on() {
+    std::fflush(stdout);
+    if (stdout_file) {
+#ifdef _WIN32
+        freopen("CON", "w", stdout); // Windows console device
+#else
+        freopen("/dev/tty", "w", stdout); // Linux/macOS console device
+#endif
+    }
+}
+} // namespace _yBenchmarkDetails
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Benchmark {
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#endif
 
 } // namespace y
 
 
-//=============================================================================
+//==============================================================================
 //= ALIASES
-//=============================================================================
+//==============================================================================
 
 #ifdef yyExposeAliases
 using namespace y::AliasStl;
 using namespace y::AliasNum;
 using namespace y::AliasGlm;
 #endif
-
-// //=============================================================================
-// //= Print Helpers
-// //=============================================================================
-
-// template <typename T>
-// std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
-//     os << "[";
-//     for (size_t i = 0; i < vec.size(); ++i) {
-//         os << vec[i];
-//         if (i < vec.size() - 1) {
-//             os << ", ";
-//         }
-//     }
-//     os << "]";
-//     return os;
-// }
-
-#endif // _guard_y_header
-
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-#ifdef yyDEFINITION
-
-#ifndef _guard_y_impl
-#define _guard_y_impl
-
-#include <fstream>
-
-namespace y {
-namespace fs = std::filesystem;
-
-//=============================================================================
-//= Files Utils
-//=============================================================================
-
-Str file_read(Str const &input_file) {
-    std::ifstream file(input_file, std::ios::ate | std::ios::binary);
-    Defer D { [&] { file.close(); } };
-
-    if (!file.is_open()) {
-        return "";
-        yErr("[file_read] Opening file: {}", input_file);
-    }
-
-    Str content;
-    content.resize(file.tellg());
-    file.seekg(0, std::ios::beg);
-    file.read(&content[0], content.size());
-
-    return content;
-}
-
-b8 file_write(Str const &output_file, char const *data, usize data_size,
-              std::ios_base::openmode mode) {
-    if (!data || data_size < 1) {
-        return false;
-        yErr("[file_write] Invalid data: {}", output_file);
-    }
-
-    std::ofstream file(output_file, std::ios::out | std::ios::binary | mode);
-    Defer D { [&] { file.close(); } };
-
-    if (!file.is_open()) {
-        return false;
-        yErr("[file_write] Opening file: {}", output_file);
-    }
-
-    file.write(data, data_size);
-
-    return true;
-}
-
-b8 file_check_extension(Str const &input_file, Str ext_ref) {
-    auto const ext = input_file.substr(input_file.find_last_of('.') + 1);
-    return str_lower(ext) == str_lower(ext_ref);
-}
-
-
-//=============================================================================
-//= Math Utils
-//=============================================================================
-
-f32 map(f32 value, f32 src_min, f32 src_max, f32 dst_min, f32 dst_max) {
-    return dst_min + (dst_max - dst_min) * (value - src_min) / (src_max - src_min);
-}
-f32 map_100(f32 value, f32 dst_min, f32 dst_max) { return map(value, 0, 100, dst_min, dst_max); }
-
-b8 fuzzy_eq(f32 f1, f32 f2, f32 threshold) {
-    auto const diff = abs(f1 - f2);
-    auto const is_eq = diff <= threshold;
-    return is_eq;
-}
-
-f32 clamp_angle(f32 angle) {
-    auto const turns = floorf(angle / 360.f);
-    return angle - 360.f * turns;
-}
-
-#ifdef yyUseLibGlm
-b8 fuzzy_eq(Vec2 const &v1, Vec2 const &v2, f32 t) {
-    return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t);
-}
-b8 fuzzy_eq(Vec3 const &v1, Vec3 const &v2, f32 t) {
-    return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t) && fuzzy_eq(v1.z, v2.z, t);
-}
-b8 fuzzy_eq(Vec4 const &v1, Vec4 const &v2, f32 t) {
-    return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t) && fuzzy_eq(v1.z, v2.z, t) &&
-           fuzzy_eq(v1.w, v2.w, t);
-}
-#endif
-
-} // namespace y
-
-
-#endif // _guard_y_impl
-#endif // yyDEFINITION
-
-// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

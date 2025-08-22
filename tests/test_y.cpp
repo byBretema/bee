@@ -2,11 +2,12 @@
 #define yyDEFINITION
 #define yyUseCustomFmt
 #define yyExposeAliases
+#define yyEnableTesting
 #include "../src/y.h"
 
 int main() {
 
-    y::Tester T {};
+    y::Test T {};
     T.set_align_column(42);
 
     T.make_section("Defer Ref");
@@ -102,11 +103,11 @@ int main() {
             f32 f = 3.14159f;
         } a;
 
-        y::Box<A> ua = y::box_make<A>("A", 3.14159f);
+        y::Box<A> ua = y::make_box<A>("A", 3.14159f);
         T.eq("Uptr 1", a.s, ua->s);
         T.eq("Uptr 2", a.f, ua->f);
 
-        y::Arc<A> sa = y::arc_make<A>("A", 3.14159f);
+        y::Arc<A> sa = y::make_arc<A>("A", 3.14159f);
         T.eq("Sptr 1", a.s, sa->s);
         T.eq("Sptr 2", a.f, sa->f);
     }
