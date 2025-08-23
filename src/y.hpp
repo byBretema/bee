@@ -404,8 +404,6 @@ using StrView = std::string_view;
 // Function
 template <typename T>
 using Fn = std::function<T>;
-using VoidFn = std::function<void()>;
-using VoidFn_ = std::function<void()> const &;
 
 // Span
 template <typename T>
@@ -492,6 +490,12 @@ inline constexpr f64 ns_to_us = 1e-3;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ElapsedTimer {
 public:
+    //--------------------------------------------------------------------------
+    static ElapsedTimer started() {
+        ElapsedTimer et;
+        et.reset();
+        return et;
+    }
     //--------------------------------------------------------------------------
     [[nodiscard]] f64 elapsed_s() const { return f64(elapsed()) * ns_to_s; }
     //--------------------------------------------------------------------------
@@ -851,7 +855,7 @@ public:
     //--------------------------------------------------------------------------
     void set_align_column(usize col) { m_align_col = std::clamp(col, 0ul, 255ul); }
     //--------------------------------------------------------------------------
-    void test(StrView title, Fn<bool()> fn, StrView msg = "") {
+    void test(StrView title, Fn<bool()> const &fn, StrView msg = "") {
         if (!fn) {
             abort();
         }
@@ -884,7 +888,7 @@ private:
     u32 m_total_count = 0;
     u32 m_pass_count = 0;
     u32 m_fail_count = 0;
-    usize m_align_col = 0;
+    usize m_align_col = 40;
     //--------------------------------------------------------------------------
 };
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -897,30 +901,63 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-namespace _yBenchmarkDetails {
-inline static FILE *stdout_file = nullptr;
-void stdout_off() {
-    std::fflush(stdout);
+class Benchmark {
+public:
+    //--------------------------------------------------------------------------
+    void run(StrView title, u32 executions, Fn<void()> const &callback) {
+        if (!callback) {
+            yWarn("⭕️ {} x {} invalid callback", title, executions);
+        }
+
+        stdout_off();
+
+        u32 i = 0;
+        yLet et = ETimer::started();
+        for (; i < executions; ++i) {
+            callback();
+        }
+        yLet elapsed = et.elapsed_ms();
+
+        stdout_on();
+
+        yLet msg_l = yFmt("⌚ {} x {}", title, executions);
+        yLet msg_r = yFmt("{} ms", elapsed);
+        usize const sep_len = m_align_col > msg_l.size() ? m_align_col - msg_l.size() : 0ul;
+        Str const sep = Str(sep_len, ' ');
+        yPrintln("{}{}  |  {}", msg_l, sep, msg_r);
+    }
+    //--------------------------------------------------------------------------
+    void set_align_column(usize col) { m_align_col = std::clamp(col, 0ul, 255ul); }
+    //--------------------------------------------------------------------------
+
+private:
+    //--------------------------------------------------------------------------
+    usize m_align_col = 40;
+    //--------------------------------------------------------------------------
+    inline static FILE *s_stdout = nullptr;
+    //--------------------------------------------------------------------------
+    static void stdout_off() {
+        std::fflush(stdout);
 #ifdef _WIN32
-    stdout_file = freopen("NUL", "w", stdout);
+        s_stdout = freopen("NUL", "w", stdout);
 #else
-    stdout_file = freopen("/dev/null", "w", stdout);
-#endif
-}
-void stdout_on() {
-    std::fflush(stdout);
-    if (stdout_file) {
-#ifdef _WIN32
-        freopen("CON", "w", stdout); // Windows console device
-#else
-        freopen("/dev/tty", "w", stdout); // Linux/macOS console device
+        s_stdout = freopen("/dev/null", "w", stdout);
 #endif
     }
-}
-} // namespace _yBenchmarkDetails
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Benchmark {
-
+    //--------------------------------------------------------------------------
+    static void stdout_on() {
+        std::fflush(stdout);
+        if (s_stdout) {
+#ifdef _WIN32
+            freopen("CON", "w", stdout); // Windows console device
+#else
+            freopen("/dev/tty", "w", stdout); // Linux/macOS console device
+#endif
+            s_stdout = nullptr;
+        }
+    }
+    //--------------------------------------------------------------------------
+};
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #endif
 

@@ -1,5 +1,4 @@
 
-#define yyDEFINITION
 #define yyUseCustomFmt
 #define yyExposeAliases
 #define yyEnableTesting
@@ -223,31 +222,3 @@ int main() {
 
     T.show_results();
 }
-
-// // Constants
-// inline int32_t BENCH_COUNT = 5;
-
-// // Cout vs Print
-// BENCH("StdCout", BENCH_COUNT, {
-//     std::cout << std::boolalpha << "[INFO] | " << __FILE__ << ":" << __LINE__ //
-//               << " | " << "2 elevated to " << 1 << " is "                     //
-//               << bee_bit(1) << " == " << true << "\n";
-// });
-// #if defined(BEE_USE_FAKE_FMT)
-// BENCH("Info (fakefmt)", BENCH_COUNT, bee_info("2 elevated to {} is {} == {}", 1, bee_bit(1),
-// true)); #elif defined(BEE_INCLUDE_FMT) BENCH("Info (fmtlib)", BENCH_COUNT, bee_info("2 elevated
-// to {} is {} == {}", 1, bee_bit(1), true)); #else BENCH("Info (apped)", BENCH_COUNT, bee_info("2
-// elevated to {} is {} == {}", 1, bee_bit(1), true)); #endif
-
-// // String replacement
-// BENCH("Str Replace Many Unsorted", BENCH_COUNT,
-//       Str s = bee::str_replace_many("1.2-3:4·5", Vec<Str> { "-", ".", "·", ":" },
-//                                     Vec<Str> { "[2] ", "[1] ", "[4] ", "[3] " }));
-// BENCH("Str Replace Many Sorted", BENCH_COUNT,
-//       Str s = bee::str_replace_many("1.2-3:4·5", Vec<Str> { ".", "-", ":", "·" },
-//                                     Vec<Str> { "[1] ", "[2] ", "[3] ", "[4] " }));
-
-// // Glm stuff
-// #ifdef BEE_INCLUDE_GLM
-// BENCH("bee_info_glm_vec3", 5, bee_info("glm vec3 {}", glmstr(Vec3(2.f))));
-// #endif
