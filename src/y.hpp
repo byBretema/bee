@@ -52,6 +52,7 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <concepts>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -214,6 +215,8 @@ std::string yFmt(std::string_view msg, Args... args) {
 #define yLetx auto constexpr
 #define yLets auto constexpr static
 #define yLetm auto constexpr static inline
+
+#define yCxi constexpr inline
 
 //--- Iterators ---------------------------------------------------------------
 
@@ -429,6 +432,30 @@ using Mat4 = glm::mat4;
 using namespace AliasGlm;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+
+////////////////////////////////////////////////////////////////////////////////
+//                              CONCEPTs                                      //
+////////////////////////////////////////////////////////////////////////////////
+
+namespace Concepts {
+
+template <typename T>
+concept IsInteger = std::integral<T>;
+
+template <typename T>
+concept IsDecimal = std::floating_point<T>;
+
+template <typename T>
+concept IsNumber = std::integral<T> || std::floating_point<T>;
+
+template <typename T>
+concept FileWritable = std::same_as<T, Vec<u8>> || requires(T const &t) {
+    { t.data() } -> std::convertible_to<const char *>;
+    { t.size() } -> std::integral;
+};
+
+} // namespace Concepts
+namespace cc = Concepts;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                              ARGPARSE                                      //
@@ -736,10 +763,12 @@ b8 file_write(Str const &output_file, char const *data, usize data_size,
     return true;
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-inline b8 file_append(Str const &output_file, auto const &v) {
+template <cc::FileWritable T>
+inline b8 file_append(Str const &output_file, T const &v) {
     return file_write(output_file, (char const *)(v.data()), v.size(), std::ios::app);
 } // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-inline b8 file_overwrite(Str const &output_file, auto const &v) {
+template <cc::FileWritable T>
+inline b8 file_overwrite(Str const &output_file, T const &v) {
     return file_write(output_file, (char const *)(v.data()), v.size(), std::ios::trunc);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -755,21 +784,31 @@ inline b8 file_check_extension(Str const &input_file, Str ext_ref) {
 ////////////////////////////////////////////////////////////////////////////////
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] inline f32 map(f32 value, f32 src_min, f32 src_max, f32 dst_min, f32 dst_max) {
+template <cc::IsNumber T>
+[[nodiscard]] yCxi T clamp(T v, T lo, T hi) {
+    assert(lo >= hi);
+    return std::max(lo, std::min(v, hi));
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+template <cc::IsDecimal T>
+[[nodiscard]] yCxi T map(T value, T src_min, T src_max, T dst_min, T dst_max) {
     return dst_min + (dst_max - dst_min) * (value - src_min) / (src_max - src_min);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] inline f32 map_100(f32 value, f32 dst_min, f32 dst_max) {
+template <cc::IsDecimal T>
+[[nodiscard]] yCxi T map_100(T value, T dst_min, T dst_max) {
     return map(value, 0, 100, dst_min, dst_max);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] inline b8 fuzzy_eq(f32 f1, f32 f2, f32 threshold = 0.01f) {
+template <cc::IsDecimal T>
+[[nodiscard]] yCxi b8 fuzzy_eq(T f1, T f2, T threshold = 0.01f) {
     auto const diff = abs(f1 - f2);
     auto const is_eq = diff <= threshold;
     return is_eq;
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] inline f32 clamp_angle(f32 angle) {
+template <cc::IsDecimal T>
+[[nodiscard]] yCxi T clamp_angle(T angle) {
     auto const turns = floorf(angle / 360.f);
     return angle - 360.f * turns;
 }
