@@ -35,17 +35,17 @@
     - snake_case : Vars  + Funcs      : Inside 'y' namespace
     - m_ prefix  : Private vars
     - s_ prefix  : Static  vars
-*/
-// Copyright Daniel Brétema, 2025.
-// Distributed under the Boost Software License, Version 1.0.
-// See complete details at https://www.boost.org/LICENSE_1_0.txt
 
+    Copyright Daniel Brétema, 2025.
+    Distributed under the Boost Software License, Version 1.0.
+    See complete details at https://www.boost.org/LICENSE_1_0.txt
+*/
 
 //==============================================================================
 //= INCLUDES
 //==============================================================================
 
-//--- STD ---------------------------------------------------------------------
+//--- STD ----------------------------------------------------------------------
 
 #include <algorithm>
 #include <array>
@@ -70,7 +70,7 @@
 #include <unordered_set>
 #include <vector>
 
-//--- SPAN --------------------------------------------------------------------
+//--- SPAN ---------------------------------------------------------------------
 
 #if __cplusplus >= 202002L
 #include <span>
@@ -79,14 +79,14 @@
 #include "tcb_span.hpp"
 #endif
 
-//--- ARGs --------------------------------------------------------------------
+//--- ARGs ---------------------------------------------------------------------
 
 #ifdef yyUseLibArgparse
 //! https://github.com/p-ranav/argparse?tab=readme-ov-file#table-of-contents
 #include <argparse/argparse.hpp>
 #endif
 
-//--- FMT ---------------------------------------------------------------------
+//--- FMT ----------------------------------------------------------------------
 
 #ifdef yyUseLibFmt
 #include <fmt/chrono.h>
@@ -95,7 +95,7 @@
 #include <fmt/std.h>
 #endif
 
-//--- GLM ---------------------------------------------------------------------
+//--- GLM ----------------------------------------------------------------------
 
 #ifdef yyUseLibGlm
 // #define GLM_FORCE_SSE
@@ -135,14 +135,12 @@
 
 #define yLog(level, msg, ...)                                                                      \
     fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, yFmt((msg), __VA_ARGS__))
+
 #define yPrintln(msg, ...) fmt::println("{}", yFmt((msg), __VA_ARGS__))
-#define yPrintln_(msg) fmt::println((msg))
 #define yPrint(msg, ...) fmt::print("{}", yFmt((msg), __VA_ARGS__))
-#define yPrint_(msg) fmt::print((msg))
 
 #else //!! Not using fmtlib (rely on std::cout)
 
-#include <format>
 #include <iostream>
 #include <regex>
 
@@ -190,25 +188,32 @@ std::string yFmt(std::string_view msg, Args... args) {
 #define yLog(level, msg, ...)                                                                      \
     std::cout << "[" << level << "] | " << __FILE__ << ":" << __LINE__ << " | "                    \
               << yFmt(msg, __VA_ARGS__) << "\n"
+
 #define yPrintln(msg, ...) std::cout << yFmt((msg), __VA_ARGS__) << "\n"
 #define yPrint(msg, ...) std::cout << yFmt((msg), __VA_ARGS__)
-#define yPrintln_(msg) std::cout << (msg) << "\n"
-#define yPrint_(msg) std::cout << (msg);
+
 #endif
 
-//--- Actual print API --------------------------------------------------------
+//--- Actual print API ---------------------------------------------------------
 
 #define yInfo(msg, ...) yLog("INFO", (msg), __VA_ARGS__)
 #define yWarn(msg, ...) yLog("WARN", (msg), __VA_ARGS__)
 #define yErr(msg, ...) yLog("ERRO", (msg), __VA_ARGS__)
 #define yDbg(msg, ...) yLog("DEBG", (msg), __VA_ARGS__)
 
+#define yPrintln_(msg) yPrintln(msg, "")
+#define yPrint_(msg) yPrint(msg, "");
+#define yInfo_(msg, ...) yLog("INFO", (msg), "")
+#define yWarn_(msg, ...) yLog("WARN", (msg), "")
+#define yErr_(msg, ...) yLog("ERRO", (msg), "")
+#define yDbg_(msg, ...) yLog("DEBG", (msg), "")
+
 
 //==============================================================================
 //= QoL MACROS
 //==============================================================================
 
-//--- Variables ---------------------------------------------------------------
+//--- Variables ----------------------------------------------------------------
 
 #define yVar auto
 #define yLet auto const
@@ -218,7 +223,7 @@ std::string yFmt(std::string_view msg, Args... args) {
 
 #define yCxi constexpr inline
 
-//--- Iterators ---------------------------------------------------------------
+//--- Iterators ----------------------------------------------------------------
 
 #define yItB(c) std::begin(c)
 #define yItE(c) std::end(c)
@@ -226,7 +231,7 @@ std::string yFmt(std::string_view msg, Args... args) {
 #define yItBEB(c) yItB(c), yItE(c), yItB(c)
 #define yItRng(c, i, e) yItB(c) + i, yItB(c) + e
 
-//--- Class helpers -----------------------------------------------------------
+//--- Class helpers ------------------------------------------------------------
 
 #define yNoCopy(T)                                                                                 \
 public:                                                                                            \
@@ -240,7 +245,21 @@ public:                                                                         
 
 #define yNoCopyNoMove(T) yNoCopy(T) yNoMove(T)
 
-//--- Concat ------------------------------------------------------------------
+#define yDefineMove(T, lhs_varname, rhs_name, move_code)                                           \
+public:                                                                                            \
+    T(T &&rhs) noexcept { *this = std::move(rhs); }                                                \
+    T &operator=(T &&rhs) noexcept {                                                               \
+        swap(*this, rhs);                                                                          \
+        return *this;                                                                              \
+    }                                                                                              \
+    friend void swap(T &lhs_varname, T &rhs_name) noexcept {                                       \
+        if (&lhs_varname == &rhs_name)                                                             \
+            return;                                                                                \
+        using std::swap;                                                                           \
+        move_code;                                                                                 \
+    }
+
+//--- Concat -------------------------------------------------------------------
 
 #ifndef _yConcat
 #define _yConcat2(l, r) l##r
@@ -248,7 +267,7 @@ public:                                                                         
 #define _yConcat(l, r) _yConcat1(l, r)
 #endif
 
-//--- Defer -------------------------------------------------------------------
+//--- Defer --------------------------------------------------------------------
 
 #define _yDefer(fn) auto const _yConcat(__yDeferVar__, __LINE__) = bee::details::Defer(fn)
 
@@ -262,32 +281,6 @@ public:                                                                         
 
 namespace y {
 namespace fs = std::filesystem;
-
-////////////////////////////////////////////////////////////////////////////////
-//                               HELPERs                                      //
-////////////////////////////////////////////////////////////////////////////////
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-template <typename T>
-struct Defer {
-    Defer() = delete;
-    Defer(T &&callback) : m_callback(std::forward<T>(callback)) {}
-    ~Defer() { m_callback(); }
-
-private:
-    const T m_callback;
-};
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-template <typename F, typename T>
-auto bind(F &&fn, T *obj) {
-    return [obj, fn](auto &&...args) -> decltype(auto) {
-        return (obj->*fn)(std::forward<decltype(args)>(args)...);
-    };
-}
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-inline size_t bit(size_t n) { return (1 << n); }
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //                               ALIASES                                      //
@@ -409,6 +402,8 @@ using StrView = std::string_view;
 // Function
 template <typename T>
 using Fn = std::function<T>;
+using VoidFn = Fn<void()>;
+using BoolFn = Fn<bool()>;
 
 // Span
 template <typename T>
@@ -443,7 +438,6 @@ using namespace AliasGlm;
 
 namespace Concepts {
 
-// A helper concept to check if a type is one of a list of types.
 template <typename T, typename... Allowed>
 concept IsOneOf = (std::same_as<T, Allowed> || ...);
 
@@ -463,14 +457,68 @@ concept IsCharList = std::same_as<T, Vec<u8>> || requires(T const &t) {
 };
 
 #ifdef yyUseLibGlm
-// template <typename T>
-// concept IsMathVec = std::same_as<T, Vec2> || std::same_as<T, Vec3> || std::same_as<T, Vec4>;
 template <typename T>
 concept IsMathVec = IsOneOf<T, Vec2, Vec3, Vec4>;
 #endif
 
 } // namespace Concepts
-namespace cc = Concepts;
+namespace tc = Concepts;
+
+
+////////////////////////////////////////////////////////////////////////////////
+//                               HELPERs                                      //
+////////////////////////////////////////////////////////////////////////////////
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+template <typename T>
+struct Defer final {
+    //--------------------------------------------------------------------------
+    Defer(T &&callback) : m_callback(std::forward<T>(callback)) {}
+    //--------------------------------------------------------------------------
+    ~Defer() { m_callback(); }
+    //--------------------------------------------------------------------------
+private:
+    //--------------------------------------------------------------------------
+    const T m_callback;
+    //--------------------------------------------------------------------------
+};
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+struct LazyGC final {
+    //--------------------------------------------------------------------------
+    yNoCopy(LazyGC);
+    //--------------------------------------------------------------------------
+    // yDefineMove(LazyGC, lhs, rhs, { lhs.m_callbacks = rhs.m_callbacks; });
+    //--------------------------------------------------------------------------
+    LazyGC &add(VoidFn &&cb) {
+        assert(cb);
+        if (cb) {
+            m_callbacks.emplace_back(std::forward<VoidFn>(cb));
+        }
+        return *this;
+    }
+    //--------------------------------------------------------------------------
+    void release() {
+        for (auto &cb : m_callbacks) {
+            cb();
+        }
+    }
+    //--------------------------------------------------------------------------
+private:
+    //--------------------------------------------------------------------------
+    Vec<VoidFn> m_callbacks {};
+    //--------------------------------------------------------------------------
+};
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+template <typename F, typename T>
+auto bind(F &&fn, T *obj) {
+    return [obj, fn](auto &&...args) -> decltype(auto) {
+        return (obj->*fn)(std::forward<decltype(args)>(args)...);
+    };
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[[nodiscard]] yCxi usize bit(usize n) { return (1 << n); }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //                              ARGPARSE                                      //
@@ -775,11 +823,11 @@ b8 file_write(Str const &output_file, char const *data, usize data_size,
     return true;
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-template <cc::IsCharList T>
+template <tc::IsCharList T>
 inline b8 file_append(Str const &output_file, T const &v) {
     return file_write(output_file, (char const *)(v.data()), v.size(), std::ios::app);
 } // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-template <cc::IsCharList T>
+template <tc::IsCharList T>
 inline b8 file_overwrite(Str const &output_file, T const &v) {
     return file_write(output_file, (char const *)(v.data()), v.size(), std::ios::trunc);
 }
@@ -796,30 +844,30 @@ inline b8 file_check_extension(Str const &input_file, Str ext_ref) {
 ////////////////////////////////////////////////////////////////////////////////
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-template <cc::IsNumber T>
+template <tc::IsNumber T>
 [[nodiscard]] yCxi T clamp(T v, T lo, T hi) {
     assert(lo >= hi);
     return std::max(lo, std::min(v, hi));
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-template <cc::IsDecimal T>
+template <tc::IsDecimal T>
 [[nodiscard]] yCxi T map(T value, T src_min, T src_max, T dst_min, T dst_max) {
     return dst_min + (dst_max - dst_min) * (value - src_min) / (src_max - src_min);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-template <cc::IsDecimal T>
+template <tc::IsDecimal T>
 [[nodiscard]] yCxi T map_100(T value, T dst_min, T dst_max) {
     return map(value, 0, 100, dst_min, dst_max);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-template <cc::IsDecimal T>
+template <tc::IsDecimal T>
 [[nodiscard]] yCxi b8 fuzzy_eq(T f1, T f2, T threshold = 0.01f) {
     auto const diff = abs(f1 - f2);
     auto const is_eq = diff <= threshold;
     return is_eq;
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-template <cc::IsDecimal T>
+template <tc::IsDecimal T>
 [[nodiscard]] yCxi T clamp_angle(T angle) {
     auto const turns = floorf(angle / 360.f);
     return angle - 360.f * turns;
