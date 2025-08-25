@@ -293,6 +293,7 @@ inline size_t bit(size_t n) { return (1 << n); }
 //                               ALIASES                                      //
 ////////////////////////////////////////////////////////////////////////////////
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 namespace AliasNum {
 
 // Bool
@@ -350,6 +351,7 @@ inline constexpr f64 f64_max = std::numeric_limits<f64>::max();
 inline constexpr f64 f64_epsilon = std::numeric_limits<f64>::epsilon();
 
 } // namespace AliasNum
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 using namespace AliasNum;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 namespace AliasStl {
@@ -419,6 +421,7 @@ using Clock = std::chrono::high_resolution_clock;
 using TimePoint = Clock::time_point;
 
 } // namespace AliasStl
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 using namespace AliasStl;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 namespace AliasGlm {
@@ -429,6 +432,7 @@ using Vec4 = glm::vec4;
 using Mat4 = glm::mat4;
 #endif
 } // namespace AliasGlm
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 using namespace AliasGlm;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -438,6 +442,10 @@ using namespace AliasGlm;
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace Concepts {
+
+// A helper concept to check if a type is one of a list of types.
+template <typename T, typename... Allowed>
+concept IsOneOf = (std::same_as<T, Allowed> || ...);
 
 template <typename T>
 concept IsInteger = std::integral<T>;
@@ -449,10 +457,17 @@ template <typename T>
 concept IsNumber = std::integral<T> || std::floating_point<T>;
 
 template <typename T>
-concept FileWritable = std::same_as<T, Vec<u8>> || requires(T const &t) {
+concept IsCharList = std::same_as<T, Vec<u8>> || requires(T const &t) {
     { t.data() } -> std::convertible_to<const char *>;
     { t.size() } -> std::integral;
 };
+
+#ifdef yyUseLibGlm
+// template <typename T>
+// concept IsMathVec = std::same_as<T, Vec2> || std::same_as<T, Vec3> || std::same_as<T, Vec4>;
+template <typename T>
+concept IsMathVec = IsOneOf<T, Vec2, Vec3, Vec4>;
+#endif
 
 } // namespace Concepts
 namespace cc = Concepts;
@@ -518,12 +533,6 @@ inline constexpr f64 ns_to_us = 1e-3;
 class ElapsedTimer {
 public:
     //--------------------------------------------------------------------------
-    static ElapsedTimer started() {
-        ElapsedTimer et;
-        et.reset();
-        return et;
-    }
-    //--------------------------------------------------------------------------
     [[nodiscard]] f64 elapsed_s() const { return f64(elapsed()) * ns_to_s; }
     //--------------------------------------------------------------------------
     [[nodiscard]] f64 elapsed_ms() const { return f64(elapsed()) * ns_to_ms; }
@@ -534,9 +543,10 @@ public:
     //--------------------------------------------------------------------------
     [[nodiscard]] b8 is_valid() const { return m_valid; }
     //--------------------------------------------------------------------------
-    void reset() {
+    ElapsedTimer &reset() {
         m_valid = true;
         m_ref = Clock::now();
+        return *this;
     }
     //--------------------------------------------------------------------------
 
@@ -727,6 +737,7 @@ using ETimer = ElapsedTimer;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 [[nodiscard]] Str file_read(Str const &input_file) {
+
     std::ifstream file(input_file, std::ios::ate | std::ios::binary);
     yDefer(file.close());
 
@@ -745,6 +756,7 @@ using ETimer = ElapsedTimer;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 b8 file_write(Str const &output_file, char const *data, usize data_size,
               std::ios_base::openmode mode) {
+
     if (!data || data_size < 1) {
         return false;
         yErr("[file_write] Invalid data: {}", output_file);
@@ -763,11 +775,11 @@ b8 file_write(Str const &output_file, char const *data, usize data_size,
     return true;
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-template <cc::FileWritable T>
+template <cc::IsCharList T>
 inline b8 file_append(Str const &output_file, T const &v) {
     return file_write(output_file, (char const *)(v.data()), v.size(), std::ios::app);
 } // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-template <cc::FileWritable T>
+template <cc::IsCharList T>
 inline b8 file_overwrite(Str const &output_file, T const &v) {
     return file_write(output_file, (char const *)(v.data()), v.size(), std::ios::trunc);
 }
@@ -815,21 +827,21 @@ template <cc::IsDecimal T>
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #ifdef yyUseLibGlm
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] inline b8 fuzzy_eq(Vec2 const &v1, Vec2 const &v2, f32 t = 0.01f) {
+[[nodiscard]] yCxi b8 fuzzy_eq(Vec2 const &v1, Vec2 const &v2, f32 t = 0.01f) {
     return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] inline b8 fuzzy_eq(Vec3 const &v1, Vec3 const &v2, f32 t = 0.01f) {
+[[nodiscard]] yCxi b8 fuzzy_eq(Vec3 const &v1, Vec3 const &v2, f32 t = 0.01f) {
     return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t) && fuzzy_eq(v1.z, v2.z, t);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[nodiscard]] inline b8 fuzzy_eq(Vec4 const &v1, Vec4 const &v2, f32 t = 0.01f) {
+[[nodiscard]] yCxi b8 fuzzy_eq(Vec4 const &v1, Vec4 const &v2, f32 t = 0.01f) {
     return fuzzy_eq(v1.x, v2.x, t) && fuzzy_eq(v1.y, v2.y, t) && //
            fuzzy_eq(v1.z, v2.z, t) && fuzzy_eq(v1.w, v2.w, t);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 template <typename T>
-[[nodiscard]] inline b8 is_aligned(T const &a, T const &b, f32 margin = 0.01f) {
+[[nodiscard]] yCxi b8 is_aligned(T const &a, T const &b, f32 margin = 0.01f) {
     return abs(glm::dot(glm::normalize(a), glm::normalize(b))) >= (1.f - f32_epsilon - margin);
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -944,6 +956,7 @@ class Benchmark {
 public:
     //--------------------------------------------------------------------------
     void run(StrView title, u32 executions, Fn<void()> const &callback) {
+
         if (!callback) {
             yWarn("⭕️ {} x {} invalid callback", title, executions);
         }
@@ -951,7 +964,7 @@ public:
         stdout_off();
 
         u32 i = 0;
-        yLet et = ETimer::started();
+        yLet et = ETimer {}.reset();
         for (; i < executions; ++i) {
             callback();
         }
