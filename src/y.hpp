@@ -129,15 +129,15 @@
 
 //--- String Builder ----------------------------------------------------------
 
-#define yFmt(msg, ...) fmt::format((msg), __VA_ARGS__)
+#define yFmt(msg, ...) fmt::format((msg), ##__VA_ARGS__)
 
 //--- Log Builder -------------------------------------------------------------
 
 #define yLog(level, msg, ...)                                                                      \
-    fmt::println("[{}] | {}:{} | {}", level, __FILE__, __LINE__, yFmt((msg), __VA_ARGS__))
+    fmt::println("[{}] | {}:{} | {}", (level), __FILE__, __LINE__, yFmt((msg), ##__VA_ARGS__))
 
-#define yPrintln(msg, ...) fmt::println("{}", yFmt((msg), __VA_ARGS__))
-#define yPrint(msg, ...) fmt::print("{}", yFmt((msg), __VA_ARGS__))
+#define yPrintln(msg, ...) fmt::println("{}", yFmt((msg), ##__VA_ARGS__))
+#define yPrint(msg, ...) fmt::print("{}", yFmt((msg), ##__VA_ARGS__))
 
 #else //!! Not using fmtlib (rely on std::cout)
 
@@ -186,27 +186,20 @@ std::string yFmt(std::string_view msg, Args... args) {
 //--- Log Builder -------------------------------------------------------------
 
 #define yLog(level, msg, ...)                                                                      \
-    std::cout << "[" << level << "] | " << __FILE__ << ":" << __LINE__ << " | "                    \
-              << yFmt(msg, __VA_ARGS__) << "\n"
+    std::cout << "[" << (level) << "] | " << __FILE__ << ":" << __LINE__ << " | "                  \
+              << yFmt((msg), ##__VA_ARGS__) << "\n"
 
-#define yPrintln(msg, ...) std::cout << yFmt((msg), __VA_ARGS__) << "\n"
-#define yPrint(msg, ...) std::cout << yFmt((msg), __VA_ARGS__)
+#define yPrintln(msg, ...) std::cout << yFmt((msg), ##__VA_ARGS__) << "\n"
+#define yPrint(msg, ...) std::cout << yFmt((msg), ##__VA_ARGS__)
 
 #endif
 
 //--- Actual print API ---------------------------------------------------------
 
-#define yInfo(msg, ...) yLog("INFO", (msg), __VA_ARGS__)
-#define yWarn(msg, ...) yLog("WARN", (msg), __VA_ARGS__)
-#define yErr(msg, ...) yLog("ERRO", (msg), __VA_ARGS__)
-#define yDbg(msg, ...) yLog("DEBG", (msg), __VA_ARGS__)
-
-#define yPrintln_(msg) yPrintln(msg, "")
-#define yPrint_(msg) yPrint(msg, "");
-#define yInfo_(msg, ...) yLog("INFO", (msg), "")
-#define yWarn_(msg, ...) yLog("WARN", (msg), "")
-#define yErr_(msg, ...) yLog("ERRO", (msg), "")
-#define yDbg_(msg, ...) yLog("DEBG", (msg), "")
+#define yInfo(msg, ...) yLog("INFO", (msg), ##__VA_ARGS__)
+#define yWarn(msg, ...) yLog("WARN", (msg), ##__VA_ARGS__)
+#define yErr(msg, ...) yLog("ERRO", (msg), ##__VA_ARGS__)
+#define yDbg(msg, ...) yLog("DEBG", (msg), ##__VA_ARGS__)
 
 
 //==============================================================================
@@ -216,10 +209,21 @@ std::string yFmt(std::string_view msg, Args... args) {
 //--- Variables ----------------------------------------------------------------
 
 #define yVar auto
+
 #define yLet auto const
-#define yLetx auto constexpr
-#define yLets auto constexpr static
-#define yLetm auto constexpr static inline
+#define yLet_s auto const static
+#define yLet_m auto const static inline
+
+// #define yCTime auto constexpr
+// #define yCTime_s auto constexpr static
+// #define yCTime_m auto constexpr static inline
+// #define yCTime_i auto constexpr static inline
+
+// #define yFn_xi auto constexpr inline
+// #define yFn_x auto constexpr
+// #define yFn auto
+
+// #define y_xi constexpr inline
 
 #define yCxi constexpr inline
 
@@ -245,18 +249,18 @@ public:                                                                         
 
 #define yNoCopyNoMove(T) yNoCopy(T) yNoMove(T)
 
-#define yDefineMove(T, lhs_varname, rhs_name, move_code)                                           \
+#define yDefineMove(T, move_code)                                                                  \
 public:                                                                                            \
-    T(T &&rhs) noexcept { *this = std::move(rhs); }                                                \
-    T &operator=(T &&rhs) noexcept {                                                               \
-        swap(*this, rhs);                                                                          \
+    T(T &&rhs_) noexcept { *this = std::move(rhs_); }                                              \
+    T &operator=(T &&rhs_) noexcept {                                                              \
+        swap(*this, rhs_);                                                                         \
         return *this;                                                                              \
     }                                                                                              \
-    friend void swap(T &lhs_varname, T &rhs_name) noexcept {                                       \
-        if (&lhs_varname == &rhs_name)                                                             \
+    friend void swap(T &lhs, T &rhs) noexcept {                                                    \
+        if (&lhs == &rhs)                                                                          \
             return;                                                                                \
         using std::swap;                                                                           \
-        move_code;                                                                                 \
+        (move_code);                                                                               \
     }
 
 //--- Concat -------------------------------------------------------------------
@@ -487,7 +491,7 @@ struct LazyGC final {
     //--------------------------------------------------------------------------
     yNoCopy(LazyGC);
     //--------------------------------------------------------------------------
-    // yDefineMove(LazyGC, lhs, rhs, { lhs.m_callbacks = rhs.m_callbacks; });
+    yDefineMove(LazyGC, { lhs.m_callbacks = rhs.m_callbacks; });
     //--------------------------------------------------------------------------
     LazyGC &add(VoidFn &&cb) {
         assert(cb);
@@ -940,7 +944,7 @@ public:
     //--------------------------------------------------------------------------
     void show_results() {
         bool const done = m_pass_count == m_total_count;
-        yPrintln_("");
+        yPrintln("");
 
         if (m_pass_count and not done)
             yPrintln("✅ PASS  |  {} / {}", m_pass_count, m_total_count);
